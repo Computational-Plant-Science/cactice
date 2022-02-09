@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from cactice.io import read_file, read_tile
+from cactice.io import read_tiles, read_tile
 
 path = 'testdata/sample1.txt'
 
@@ -25,7 +25,7 @@ def test_read_file():
         sorted([[6, 22], [6, 23], [7, 23], [8, 23], [8, 24]])
     ])
 
-    actual = read_file(path)
+    actual = read_tiles(path)
     # pprint(actual)
 
     for tile in expected: assert tile in actual

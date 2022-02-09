@@ -1,4 +1,8 @@
 import logging
+from typing import Dict
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +31,7 @@ def read_tile(lines, target, i, j):
     return tile
 
 
-def read_file(path, target='#'):
+def read_tiles(path, target='#'):
     with open(path) as file:
         # read all lines in file
         lines = file.readlines()
@@ -64,3 +68,56 @@ def read_file(path, target='#'):
     logger.info(f"Found {len(tiles)} tiles")
 
     return sorted(tiles)
+
+
+def read_csv(path) -> Dict[str, np.ndarray]:
+    df = pd.read_csv(path, sep=',')
+
+    # if there's only 1 grid and no `Grid` column, create it
+    if 'Grid' not in df: df['Grid'] = 1
+
+    # convert tabular data to list of 2D plots
+    grids = dict()
+    names = sorted(list(set(df['Grid'])))
+
+    for name in names:
+        # subset the data frame corresponding to the current grid
+        sdf = df.loc[df['Grid'] == name]
+
+        # find row and column counts (including missing values)
+        rows = max(sdf['I']) - min(sdf['I']) + 1
+        cols = max(sdf['J']) - min(sdf['J']) + 1
+
+        # initialize grid as empty 2D array
+        grid = np.zeros(shape=(rows, cols))
+
+        # loop over cells and populate 2D array
+        for i in range(0, rows):
+            for j in range(0, cols):
+
+                # check entry at location (i, j)
+                matched = sdf.loc[(df['I'] == i) & (df['J'] == j)]
+
+                # if missing, fill it in with class = 0 (unknown)
+                if len(matched) == 0:
+                    cls = 0
+                    df = df.append({
+                        'Grid': name,
+                        'Class': cls,
+                        'I': i,
+                        'J': j
+                    }, ignore_index=True)
+                # otherwise use the given value
+                else:
+                    cls = matched.to_dict('records')[0]['class']
+
+                # update the grid
+                grid[i, j] = cls
+
+        # save by name
+        grids[str(name)] = grid
+
+    return grids
+
+
+
