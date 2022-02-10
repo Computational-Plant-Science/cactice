@@ -109,13 +109,13 @@ def read_csv(path) -> Dict[str, np.ndarray]:
                     }, ignore_index=True)
                 # otherwise use the given value
                 else:
-                    cls = matched.to_dict('records')[0]['class']
+                    cls = matched.to_dict('records')[0]['Class']
 
                 # update the grid
                 grid[i, j] = cls
 
-        # save by name
-        grids[str(name)] = grid
+        # save by name and cast values from float (numpy default) to int
+        grids[str(name)] = grid.astype(int)
 
     return grids
 
