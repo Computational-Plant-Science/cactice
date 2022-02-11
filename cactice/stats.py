@@ -1,18 +1,68 @@
-from typing import Dict, Tuple
+from typing import List, Tuple
+from itertools import product
 from collections import Counter, OrderedDict
 
 import numpy as np
 
 
-def class_distribution(grids: Dict[str, np.ndarray]) -> Tuple[int, int, dict, dict]:
-    all_locs = [str(int(c)) for cls in [r for row in [[grid[i] for i in range(0, grid.shape[0])] for grid in grids.values()] for r in row] for c in cls]
-    all_locs = [p for p in all_locs if p != '0']  # exclude missing values
-    num_locs = len(all_locs)  # count total number of locations
-    all_classes = list(set(all_locs))  # get unique classes
-    num_classes = len(all_classes)  # count unique classes
+def classes(grids: List[np.ndarray]) -> dict:
+    """
 
-    # count class occurrences and compute proportions
-    freq = OrderedDict(sorted(dict(Counter(all_locs)).items()))
-    mass = {k: round(v / sum(freq.values()), 4) for (k, v) in freq.items()}
+    :param grids: A dictionary containing grids, identified by name
+    :return:
+    """
+    cells = [str(int(c)) for cls in
+             [r for row in [[grid[col_i] for col_i in range(0, grid.shape[0])] for grid in grids] for r in row] for
+             c in cls]  # flatten all grid cells into single list
+    cells = [c for c in cells if c != '0']  # exclude missing values
 
-    return num_locs, num_classes, freq, mass
+    # count occurrences and compute proportions
+    freq = dict(OrderedDict(Counter(cells)))
+    uniq = len(freq.keys())
+    mass = {k: round(v / sum(freq.values()), uniq) for (k, v) in freq.items()}
+
+    return mass
+
+
+def undirected_transitions(grids: List[np.ndarray]) -> Tuple[dict, dict]:
+    horiz = dict({
+        '11': 0,
+        '12': 0,
+        '13': 0,
+        '14': 0,
+        '22': 0,
+        '23': 0,
+        '24': 0,
+        '33': 0,
+        '34': 0,
+        '44': 0
+    })
+    vert = horiz.copy()
+
+    for grid in grids:
+        # get width and height
+        w, h = grid.shape
+
+        # count horizontal undirected transitions
+        for i, j in product(range(w - 1), range(h)):
+            a = grid[i, j]
+            b = grid[i + 1, j]
+            key = ''.join(sorted([str(int(a)), str(int(b))]))
+            if '0' not in key:
+                horiz[key] = horiz[key] + 1
+
+        # count vertical undirected transitions
+        for i, j in product(range(w), range(h - 1)):
+            a = grid[i, j]
+            b = grid[i, j + 1]
+            key = ''.join(sorted([str(int(a)), str(int(b))]))
+            if '0' not in key:
+                vert[key] = vert[key] + 1
+
+    # compute proportions
+    horiz_uniq = len(horiz.keys())
+    horiz_mass = {k: round(v / sum(horiz.values()), horiz_uniq) for (k, v) in horiz.items()}
+    vert_uniq = len(vert.keys())
+    vert_mass = {k: round(v / sum(vert.values()), vert_uniq) for (k, v) in vert.items()}
+
+    return horiz_mass, vert_mass
