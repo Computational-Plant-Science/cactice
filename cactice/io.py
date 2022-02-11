@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -7,31 +7,14 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def read_tile(lines, target, i, j):
-    rows = len(lines)
-    cols = len(lines[0])
+def read_grid_txt(path: str) -> np.ndarray:
+    """
+    Reads a grid from the text file at the given path.
 
-    # get this character's neighbors in the 4 cardinal directions
-    up = lines[i - 1][j] if i > 0 else ' '
-    down = lines[i + 1][j] if i < rows - 1 else ' '
-    left = lines[i][j - 1] if j > 0 else ' '
-    right = lines[i][j + 1] if j < cols - 1 else ' '
+    :param path: The text file path
+    :return: The pattern as a 2D NumPy array
+    """
 
-    # set the current character to empty to avoid infinite recursion
-    lines[i][j] = ' '
-    tile = [[i, j]]
-
-    # function calls itself on non-empty neighbors
-    if up == target: tile = tile + read_tile(lines, target, i - 1, j)
-    if down == target: tile = tile + read_tile(lines, target, i + 1, j)
-    if left == target: tile = tile + read_tile(lines, target, i, j - 1)
-    if right == target: tile = tile + read_tile(lines, target, i, j + 1)
-
-    # otherwise just return what we've got so far
-    return tile
-
-
-def read_tiles(path, target='#'):
     with open(path) as file:
         # read all lines in file
         lines = file.readlines()
@@ -39,6 +22,7 @@ def read_tiles(path, target='#'):
         # max line length (for padding to rectangularity)
         cols = max([len(line) for line in lines])
 
+        # convert each line (str) to an array of characters
         formatted = []
         for line in lines:
             # strip newlines
@@ -50,43 +34,61 @@ def read_tiles(path, target='#'):
             # convert to char array
             formatted.append(list(padded))
 
-        # find tiles
-        tiles = []
-        for i, line in enumerate(formatted):
-            for j, char in enumerate(line):
+        # since we've padded each line to be the same length, numpy interprets a 2D array
+        grid = np.array(formatted)
 
-                # if we've chanced upon a tile...
-                if formatted[i][j] == target:
+        # we want to work with numeric values, so replace non-numeric features
+        seen = dict()
+        for (i, j), cell in np.ndenumerate(grid):
+            here = grid[i, j]
+            if here not in seen.keys(): seen[here] = len(seen.keys())
+            grid[i, j] = seen[here]
 
-                    # search recursively for all target chars next to this one
-                    tile = read_tile(formatted, target, i, j)
-
-                    # save and report the find
-                    tiles.append(sorted(tile))
-                    logger.debug(f"Tile {len(tiles)} (size {len(tile)}): {tile}")
-
-    logger.info(f"Found {len(tiles)} tiles")
-
-    return sorted(tiles)
+        return grid.astype(int)
 
 
-def read_csv(path) -> Dict[str, np.ndarray]:
+def read_grids_csv(
+        path: str,
+        name_header: str = 'Grid',
+        class_header: str = 'Class',
+        row_header: str = 'I',
+        col_header: str = 'J') -> Dict[str, np.ndarray]:
+    """
+    Reads grids from the CSV file at the given path, in the following format:
+    <grid name>, <cell class>, <cell row>, <cell column>
+
+    If the first column is not provided, all cells are assumed to lie on the same grid whose name defaults to '1'.
+
+    TODO: If header mappings are provided, the first row is assumed to contain headers and columns are selected according to the given mappings. (If any header mappings are provided, all must be.) If header mappings are not provided, the first row is assumed to contain data and the first 4 columns are assumed name, class, row, and column, in that order.
+
+    :param path: The CSV file path
+    :param name_header: The column containing grid names
+    :param class_header: the column containing class values (discrete random variable)
+    :param row_header: The column containing row indices
+    :param col_header: The column containing column indices
+    :return: A dictionary containing grids identified by name
+    """
+
+    # see if we have headers
+    # headers = name_header or class_header or row_header or col_header
+
+    # load the CSV into a data frame
+    # TODO: determine whether to read headers or not based on params
     df = pd.read_csv(path, sep=',')
 
-    # if there's only 1 grid and no `Grid` column, create it
-    if 'Grid' not in df: df['Grid'] = 1
+    # if there's only 1 grid and no specified name column, create it
+    if name_header not in df: df[name_header] = 1
 
-    # convert tabular data to list of 2D plots
     grids = dict()
-    names = sorted(list(set(df['Grid'])))
+    names = sorted(list(set(df[name_header])))
 
     for name in names:
         # subset the data frame corresponding to the current grid
-        sdf = df.loc[df['Grid'] == name]
+        sdf = df.loc[df[name_header] == name]
 
         # find row and column counts (including missing values)
-        rows = max(sdf['I']) - min(sdf['I']) + 1
-        cols = max(sdf['J']) - min(sdf['J']) + 1
+        rows = max(sdf[row_header]) - min(sdf[row_header]) + 1
+        cols = max(sdf[col_header]) - min(sdf[col_header]) + 1
 
         # initialize grid as empty 2D array
         grid = np.zeros(shape=(rows, cols))
@@ -96,20 +98,20 @@ def read_csv(path) -> Dict[str, np.ndarray]:
             for j in range(0, cols):
 
                 # check entry at location (i, j)
-                matched = sdf.loc[(df['I'] == i) & (df['J'] == j)]
+                matched = sdf.loc[(df[row_header] == i) & (df[col_header] == j)]
 
                 # if missing, fill it in with class = 0 (unknown)
                 if len(matched) == 0:
                     cls = 0
                     df = df.append({
-                        'Grid': name,
-                        'Class': cls,
-                        'I': i,
-                        'J': j
+                        name_header: name,
+                        class_header: cls,
+                        row_header: i,
+                        col_header: j
                     }, ignore_index=True)
                 # otherwise use the given value
                 else:
-                    cls = matched.to_dict('records')[0]['Class']
+                    cls = matched.to_dict('records')[0][class_header]
 
                 # update the grid
                 grid[i, j] = cls
@@ -118,6 +120,3 @@ def read_csv(path) -> Dict[str, np.ndarray]:
         grids[str(name)] = grid.astype(int)
 
     return grids
-
-
-

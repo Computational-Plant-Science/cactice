@@ -7,9 +7,10 @@ import numpy as np
 
 def classes(grids: List[np.ndarray]) -> dict:
     """
+    Computes the probability mass function (PMF) for classes (unique values) on the given grids.
 
-    :param grids: A dictionary containing grids, identified by name
-    :return:
+    :param grids: A list of grids
+    :return: The class probability mass
     """
     cells = [str(int(c)) for cls in
              [r for row in [[grid[col_i] for col_i in range(0, grid.shape[0])] for grid in grids] for r in row] for
@@ -25,6 +26,13 @@ def classes(grids: List[np.ndarray]) -> dict:
 
 
 def undirected_transitions(grids: List[np.ndarray]) -> Tuple[dict, dict]:
+    """
+    Computes the probability mass function (PMF) for horizontal and vertical undirected transitions (class adjacencies) on the given grids.
+
+    :param grids: A list of grids
+    :return: A dictionary with key as random variable and value as probablity mass.
+    """
+
     horiz = dict({
         '11': 0,
         '12': 0,
