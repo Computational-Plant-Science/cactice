@@ -1,6 +1,6 @@
 import sys
 import random
-from typing import List
+from typing import List, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -25,10 +25,25 @@ def hamming_distance(a: List[int], b: List[int]) -> int:
     return sum(ca != cb for ca, cb in zip(a_str, b_str))
 
 
-def get_neighbors(grid, i, j, neighbors: Neighbors = Neighbors.CARDINAL, layers: int = 1):
-    found = []
+def get_neighborhood(
+        grid: np.ndarray,
+        i: int,
+        j: int,
+        neighbors: Neighbors = Neighbors.CARDINAL,
+        layers: int = 1) -> Dict[Tuple[int, int], int]:
+    """
+    Computes the neighborhood around the given grid cell.
+
+    :param grid: The grid
+    :param i: The cell's row index
+    :param j: The cell's column index
+    :param neighbors: The cells to consider neighbors
+    :param layers: The width of the neighborhood
+    :return: A dictionary mapping relative locations from the central cell to neighboring cell values
+    """
 
     # proceed outward from the nearest layer
+    neighborhood = dict()
     for layer in range(1, layers + 1):
         # check if we're up against any boundaries
         bt = (i - layer < 0)                # top
@@ -48,14 +63,28 @@ def get_neighbors(grid, i, j, neighbors: Neighbors = Neighbors.CARDINAL, layers:
         bottomleft = None if (bb or bl) else grid[i + layer, j - layer]
         bottomright = None if (bb or br) else grid[i + layer, j + layer]
 
-        # append this layer's neighbors to the list
+        # TODO: compute off-cardinal/-diagonal neighbors
+
+        # store cardinal neighbors
         if neighbors == Neighbors.CARDINAL or neighbors == Neighbors.COMPLETE:
-            found = found + [top, bottom, left, right]
+            neighborhood[(-1, 0)] = top
+            neighborhood[(1, 0)] = bottom
+            neighborhood[(0, -1)] = left
+            neighborhood[(0, 1)] = right
+
+        # store diagonal neighbors
         elif neighbors == Neighbors.DIAGONAL or neighbors == Neighbors.COMPLETE:
-            found = found + [topleft, topright, bottomleft, bottomright]
+            neighborhood[(-1, -1)] = topleft
+            neighborhood[(-1, 1)] = topright
+            neighborhood[(1, -1)] = bottomleft
+            neighborhood[(1, 1)] = bottomright
+
+        if neighbors == Neighbors.COMPLETE:
+            # TODO: store off-cardinal/-diagonal neighbors
+            pass
 
     # return only non-None neighbors
-    return [neighbor for neighbor in found if neighbor is not None]
+    return {k: v for k, v in neighborhood if v is not None}
 
 
 class KNN:
@@ -68,7 +97,11 @@ class KNN:
         """
         self.__neighbors = neighbors
         self.__layers = layers
-        self.__neighborhoods: List[List[int]] = []
+
+        # we store neighborhoods as a list of grids,
+        # each grid a dictionary mapping absolute cell coordinates (i, j) to neighborhoods,
+        # each neighborhood a dictionary mapping relative cell coordinates (i, j) to values
+        self.__neighborhoods: List[Dict[Tuple[int, int], Dict[Tuple[int, int], int]]] = []
 
     def fit(self, grids: List[np.ndarray]):
         """
@@ -78,19 +111,12 @@ class KNN:
         # set the training set
         self.__train = grids
 
-        # compute neighbors for each cell in each grid
+        # for each grid...
         for grid in grids:
-            self.__neighborhoods = self.__neighborhoods + [[grid[i, j]] + get_neighbors(grid, i, j, self.__neighbors, self.__layers) for i in range(0, grid.shape[0]) for j in range(0, grid.shape[1])]
+            # compute neighborhood at each cell
+            neighborhoods = {(i, j): get_neighborhood(grid, i, j, self.__neighbors, self.__layers) for i in range(0, grid.shape[0]) for j in range(0, grid.shape[1])}
 
-        # TODO: is there any reason to use a data frame?
-        # create data frame headers
-        # columns = ['Cell']
-        # if self.__neighbors == Neighbors.CARDINAL or self.__neighbors == Neighbors.COMPLETE:
-        #     columns = columns + np.ravel([[f"Top{l}", f"Bottom{l}", f"Left{l}", f"Right{l}"] for l in range(1, self.__layers + 1)])
-        # if self.__neighbors == Neighbors.DIAGONAL or self.__neighbors == Neighbors.COMPLETE:
-        #     columns = columns + np.ravel([[f"Topleft{l}", f"Topright{l}", f"Bottomleft{l}", f"Bottomright{l}"] for l in range(1, self.__layers + 1)])
-
-        # self.__neighborhoods = pd.DataFrame(data=neighborhoods, columns=columns, dtype=int)
+            self.__neighborhoods.append(neighborhoods)
 
     def predict(self, grids: List[np.ndarray] = None):
         """
@@ -103,6 +129,7 @@ class KNN:
 
         # initialize grids to predict on
         prediction_grids = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]
+        trained_nbrhoods = [h for hds in [list(hoods.values()) for hoods in self.__neighborhoods] for h in hds]
 
         for grid_index, grid in enumerate(prediction_grids):
             # find cells to predict (missing locations)
@@ -114,16 +141,16 @@ class KNN:
                 min_dist = sys.float_info.max
 
                 # get the missing location's neighbors
-                neighbors = get_neighbors(grid, i, j, self.__neighbors, self.__layers)
+                neighborhood = get_neighborhood(grid, i, j, self.__neighbors, self.__layers)
 
                 # compute distance from this neighborhood to every training neighborhood
-                for neighborhood in self.__neighborhoods:
-                    distance = hamming_distance(neighbors, neighborhood[1:])
+                for trained in trained_nbrhoods:
+                    distance = hamming_distance(list(neighborhood.values()), list(trained.values()))
 
                     # if we have a new minimum distance, update the prediction
                     if distance < min_dist:
                         min_dist = distance
-                        prediction = neighborhood[0]
+                        prediction = neighborhood[(0, 0)]
 
                 # set the cell in the corresponding grid
                 prediction_grids[grid_index][i, j] = prediction
