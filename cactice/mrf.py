@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from cactice.enums import Neighbors
+from cactice.neighbors import Neighbors
 
 
 class MRF:

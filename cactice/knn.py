@@ -1,104 +1,27 @@
-import sys
-import random
 from typing import List, Dict, Tuple
+from itertools import islice
+from collections import Counter
 
 import numpy as np
-import pandas as pd
-
-from cactice.enums import Neighbors
-
 
 # TODO: more distance function options?
-
-def hamming_distance(a: List[int], b: List[int]) -> int:
-    """
-    Computes the Hamming distance between the neighborhoods (interpreted as strings).
-    Assumes both neighborhoods are of equal size. Adapted from https://stackoverflow.com/a/54174768/6514033.
-
-    :param a: The first neighborhood
-    :param b: The second neighborhood
-    :return: The Hamming distance
-    """
-    a_str = ''.join([str(i) for i in a])
-    b_str = ''.join([str(i) for i in b])
-
-    return sum(ca != cb for ca, cb in zip(a_str, b_str))
-
-
-def get_neighborhood(
-        grid: np.ndarray,
-        i: int,
-        j: int,
-        neighbors: Neighbors = Neighbors.CARDINAL,
-        layers: int = 1) -> Dict[Tuple[int, int], int]:
-    """
-    Computes the neighborhood around the given grid cell.
-
-    :param grid: The grid
-    :param i: The cell's row index
-    :param j: The cell's column index
-    :param neighbors: The cells to consider neighbors
-    :param layers: The width of the neighborhood
-    :return: A dictionary mapping relative locations from the central cell to neighboring cell values
-    """
-
-    # proceed outward from the nearest layer
-    neighborhood = dict()
-    for layer in range(1, layers + 1):
-        # check if we're up against any boundaries
-        bt = (i - layer < 0)                # top
-        bb = i < (grid.shape[0] - layer)    # bottom
-        bl = (j - layer < 0)                # left
-        br = j < (grid.shape[1] - layer)    # right
-
-        # compute cardinal neighbors (set to None if on or beyond boundary)
-        top = None if bt else grid[i - layer, j]
-        bottom = None if bb else grid[i + layer, j]
-        left = None if bl else grid[i, j - layer]
-        right = None if br else grid[i, j + layer]
-
-        # compute diagonal neighbors (set to None if on or beyond boundary)
-        topleft = None if (bt or bl) else grid[i - layer, j - layer]
-        topright = None if (bt or br) else grid[i - layer, j + layer]
-        bottomleft = None if (bb or bl) else grid[i + layer, j - layer]
-        bottomright = None if (bb or br) else grid[i + layer, j + layer]
-
-        # TODO: compute off-cardinal/-diagonal neighbors
-
-        # store cardinal neighbors
-        if neighbors == Neighbors.CARDINAL or neighbors == Neighbors.COMPLETE:
-            neighborhood[(-1, 0)] = top
-            neighborhood[(1, 0)] = bottom
-            neighborhood[(0, -1)] = left
-            neighborhood[(0, 1)] = right
-
-        # store diagonal neighbors
-        elif neighbors == Neighbors.DIAGONAL or neighbors == Neighbors.COMPLETE:
-            neighborhood[(-1, -1)] = topleft
-            neighborhood[(-1, 1)] = topright
-            neighborhood[(1, -1)] = bottomleft
-            neighborhood[(1, 1)] = bottomright
-
-        if neighbors == Neighbors.COMPLETE:
-            # TODO: store off-cardinal/-diagonal neighbors
-            pass
-
-    # return only non-None neighbors
-    return {k: v for k, v in neighborhood if v is not None}
+from cactice.neighbors import get_neighborhood, Neighbors
+from cactice.distance import hamming_distance
 
 
 class KNN:
-    def __init__(self, neighbors: Neighbors = Neighbors.CARDINAL, layers: int = 1):
+    def __init__(self, k: int = 10, neighbors: Neighbors = Neighbors.CARDINAL, layers: int = 1):
         """
-        Initialize a K-nearest neighbors model.
+        Create a K-nearest neighbors model.
 
         :param neighbors: Which adjacent cells to consider neighbors.
         :param layers: How many layers of adjacent cells to consider neighbors.
         """
+        self.__k = k
         self.__neighbors = neighbors
         self.__layers = layers
 
-        # we store neighborhoods as a list of grids,
+        # store neighborhoods as a list of grids,
         # each grid a dictionary mapping absolute cell coordinates (i, j) to neighborhoods,
         # each neighborhood a dictionary mapping relative cell coordinates (i, j) to values
         self.__neighborhoods: List[Dict[Tuple[int, int], Dict[Tuple[int, int], int]]] = []
@@ -120,39 +43,41 @@ class KNN:
 
     def predict(self, grids: List[np.ndarray] = None):
         """
-        Impute missing cells on the grids used to fit the model (or on the given grids, if provided).
-        To generate entirely new predictions conditioned on the training set, provide a list of empty (zero) grids.
+        Predict missing cells on the training grids or on the given grids (if provided).
+        To generate entirely novel grids conditioned on the training set, provide a list of empty (zero-valued) arrays.
 
-        :param grids: The grids to predict on (the training set will be used otherwise)
-        :return: The grids with missing values filled in.
+        :param grids: The grids to predict on (if none are provided the training set will be used).
+        :return: The predicted grids.
         """
 
         # initialize grids to predict on
-        prediction_grids = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]
-        trained_nbrhoods = [h for hds in [list(hoods.values()) for hoods in self.__neighborhoods] for h in hds]
+        grid_predictions = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]
 
-        for grid_index, grid in enumerate(prediction_grids):
+        # flatten all training grids' neighborhoods into one list
+        neighborhoods = [h for hs in [list(nhds.values()) for nhds in self.__neighborhoods] for h in hs]
+
+        for gi, grid in enumerate(grid_predictions):
             # find cells to predict (missing locations)
             missing = [(i, j) for i in range(0, grid.shape[0]) for j in range(0, grid.shape[1]) if grid[i, j] == 0]
 
             # predict cells one by one
             for i, j in missing:
-                prediction = 0
-                min_dist = sys.float_info.max
-
                 # get the missing location's neighbors
                 neighborhood = get_neighborhood(grid, i, j, self.__neighbors, self.__layers)
 
                 # compute distance from this neighborhood to every training neighborhood
-                for trained in trained_nbrhoods:
-                    distance = hamming_distance(list(neighborhood.values()), list(trained.values()))
+                distances = {nh[(0, 0)]: hamming_distance(list(neighborhood.values()), list(nh.values())) for nh in neighborhoods}
 
-                    # if we have a new minimum distance, update the prediction
-                    if distance < min_dist:
-                        min_dist = distance
-                        prediction = neighborhood[(0, 0)]
+                # sort distances ascending
+                distances = dict(sorted(distances.items(), key=lambda k, v: v, reverse=True))
+
+                # keep k most similar neighborhoods (k nearest neighbor neighborhoods)
+                distances = dict(islice(distances, self.__k))
+
+                # count frequency of each cell value in and pick the most common (ties broken randomly)
+                cell_prediction = Counter(distances.values()).most_common(1)[0][0]
 
                 # set the cell in the corresponding grid
-                prediction_grids[grid_index][i, j] = prediction
+                grid_predictions[gi][i, j] = cell_prediction
 
-        return prediction_grids
+        return grid_predictions

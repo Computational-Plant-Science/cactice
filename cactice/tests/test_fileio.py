@@ -3,7 +3,7 @@ from pprint import pprint
 import numpy as np
 import numpy.testing as npt
 
-from cactice.io import read_grid_txt, read_grids_csv
+from cactice.fileio import read_grid_txt, read_grids_csv
 
 tiles_path = 'testdata/tiles_sample1.txt'
 csv_path = 'testdata/grids_sample1.csv'

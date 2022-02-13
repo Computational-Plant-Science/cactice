@@ -5,7 +5,7 @@ import numpy as np
 import seaborn as sns
 
 
-def show_grid(grid: np.ndarray, title: Optional[str] = None, cmap='Greens') -> None:
+def plot_grid(grid: np.ndarray, title: Optional[str] = None, cmap='Greens') -> None:
     # plt.figure(figsize=(20, 20))
     values = list(set(np.ravel(grid)))
     labels = np.vectorize(lambda x: str(int(x)) if x != 0 else '')(grid)
