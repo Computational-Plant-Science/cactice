@@ -70,5 +70,3 @@ def get_neighborhood(
 
     # return only non-None neighbors
     return {k: v for k, v in neighborhood if v is not None}
-
-

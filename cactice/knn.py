@@ -58,7 +58,9 @@ class KNN:
 
         for gi, grid in enumerate(grid_predictions):
             # find cells to predict (missing locations)
-            missing = [(i, j) for i in range(0, grid.shape[0]) for j in range(0, grid.shape[1]) if grid[i, j] == 0]
+            rows = range(0, grid.shape[0])
+            cols = range(0, grid.shape[1])
+            missing = [(i, j) for i in rows for j in cols if grid[i, j] == 0]
 
             # predict cells one by one
             for i, j in missing:

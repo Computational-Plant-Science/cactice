@@ -1,11 +1,11 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from itertools import product
 from collections import Counter, OrderedDict
 
 import numpy as np
 
 
-def classes(grids: List[np.ndarray]) -> dict:
+def classes(grids: List[np.ndarray]) -> Dict[str, float]:
     """
     Computes the probability mass function (PMF) for classes (unique values) on the given grids.
 
@@ -25,7 +25,7 @@ def classes(grids: List[np.ndarray]) -> dict:
     return mass
 
 
-def undirected_transitions(grids: List[np.ndarray]) -> Tuple[dict, dict]:
+def undirected_transitions(grids: List[np.ndarray]) -> Tuple[Dict[str, float], Dict[str, float]]:
     """
     Computes the probability mass function (PMF) for horizontal and vertical undirected transitions (class adjacencies) on the given grids.
 
