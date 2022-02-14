@@ -1,14 +1,20 @@
-from typing import Optional, Dict
+import math
+from typing import Optional, Dict, Tuple
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import ConnectionPatch
+from matplotlib.ticker import MaxNLocator
+import matplotlib.cm as cm
 import numpy as np
 import seaborn as sns
 
 from cactice.utils import unit_scale
 
 
-def plot_grid(grid: np.ndarray, title: Optional[str] = None, cmap='Greens') -> None:
+def plot_grid(
+        grid: np.ndarray,
+        title: Optional[str] = None,
+        cmap='Greens') -> None:
     # plt.figure(figsize=(20, 20))
     values = list(set(np.ravel(grid)))
     labels = np.vectorize(lambda x: str(int(x)) if x != 0 else '')(grid)
@@ -23,6 +29,44 @@ def plot_grid(grid: np.ndarray, title: Optional[str] = None, cmap='Greens') -> N
         vmax=5 if 0 in values else 4,
         alpha=0.5)
     if title: ax.set_title(title)
+    plt.show()
+
+
+def plot_cell_dist(
+        dist: Dict[str, float],
+        title: str = 'Cell distribution',
+        cmap='Greens'):
+    ax = sns.barplot(x=list(dist.keys()), y=list(dist.values()), palette=cmap)
+    ax.set_title(title)
+    # bars = plt.bar(dist.keys(), dist.values())
+    # classes = [int(k) for k in dist.keys()]
+    # num_classes = len(classes)
+    # color = [(c / num_classes * 0.75) for c in classes]
+    # for i, b in enumerate(bars): b.set_color(cm.tab20(color[i]))
+    # plt.title(title)
+    # plt.xlabel("Cell class")
+    # plt.ylabel("Proportion")
+    # plt.set_cmap(cmap)
+    # fig.xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.show()
+
+
+def plot_undirected_bond_dist(
+        dist: Dict[Tuple[int, int], float],
+        title: str = 'Undirected bond distribution',
+        cmap='Greens'):
+    # classes = list(set([k[0] for k in dist.keys()]))
+    # num_classes = int(math.sqrt(len(dist.keys())))
+    # color = [(c / num_classes * 0.75) for c in classes]
+
+    x_axis = np.arange(len(dist.keys()))
+    plt.figure(figsize=(20, 6))
+    plt.title(title)
+    plt.bar(x_axis, dist.values(), 0.8)
+    plt.xticks(x_axis, dist.keys())
+    plt.xlabel("Bond")
+    plt.ylabel("Proportion")
+    plt.legend()
     plt.show()
 
 
