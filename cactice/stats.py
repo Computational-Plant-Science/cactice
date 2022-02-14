@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict
-from itertools import product
+from itertools import product, repeat
 from collections import Counter, OrderedDict
+from pprint import pprint
 
 import numpy as np
 
@@ -17,15 +18,24 @@ def flatten(grids: List[np.ndarray]) -> List[int]:
              c in cc]
 
 
-def cell_dist(grids: List[np.ndarray]) -> Dict[str, float]:
+def cell_dist(
+        grids: List[np.ndarray],
+        exclude_zero: bool = False) -> Dict[str, float]:
     """
     Computes the probability mass function (PMF) for classes (unique values) on the given grids.
 
     :param grids: A list of grids
+    :param exclude_zero: Exclude zero-valued cells (interpreted to be missing values)
     :return: The class probability mass
     """
+
+    # flatten the grids into a single list of cells
     cells = flatten(grids)
-    # cells = [cell for cell in cells if cell != 0]  # exclude missing (zero-valued) cells
+
+    # optionally exclude zero-valued cells
+
+    if exclude_zero:
+        cells = [cell for cell in cells if cell != 0]
 
     # count occurrences and compute proportions
     freq = dict(OrderedDict(Counter(cells)))
@@ -35,20 +45,31 @@ def cell_dist(grids: List[np.ndarray]) -> Dict[str, float]:
     return mass
 
 
-def undirected_bond_dist(grids: List[np.ndarray]) -> Tuple[Dict[str, float], Dict[str, float]]:
+def undirected_bond_dist(
+        grids: List[np.ndarray],
+        exclude_zero: bool = False) -> Tuple[Dict[str, float], Dict[str, float]]:
     """
     Computes the probability mass function (PMF) for horizontal and vertical undirected transitions (class adjacencies) on the given grids.
 
     :param grids: A list of grids
+    :param exclude_zeros: Exclude zero-valued cells (interpreted to be missing values)
     :return: A dictionary with key as random variable and value as probablity mass.
     """
 
+    # flatten the grids into a single list of cells
     cells = flatten(grids)
-    # cells = [cell for cell in cells if cell != 0]  # exclude missing (zero-valued) cells
-    classes = set(cells)                           # unique class values
-    pairs = product(classes, classes)              # Cartesian product of classes
 
-    horiz = {f"{ca}-{cb}": 0 for ca, cb in pairs}
+    # optionally exclude zero-valued cells
+    if exclude_zero:
+        cells = [cell for cell in cells if cell != 0]
+
+    # enumerate undirected pairs
+    classes = set(cells)
+    sets = set([frozenset([p[0], p[1]]) for p in product(classes, classes)])
+    pairs = sorted([(list(p) if len(p) == 2 else list(repeat(next(iter(p)), 2))) for p in sets])
+
+    # dicts to populate
+    horiz = {(ca, cb): 0 for ca, cb in pairs}
     vert = horiz.copy()
 
     for grid in grids:
@@ -58,16 +79,16 @@ def undirected_bond_dist(grids: List[np.ndarray]) -> Tuple[Dict[str, float], Dic
         for i, j in product(range(w - 1), range(h)):
             a = grid[i, j]
             b = grid[i + 1, j]
-            key = '-'.join(sorted([str(int(a)), str(int(b))]))
-            # if '0' not in key:
+            sk = sorted([int(a), int(b)])
+            key = (sk[0], sk[1])
             horiz[key] = horiz[key] + 1
 
         # count vertical bonds
         for i, j in product(range(w), range(h - 1)):
             a = grid[i, j]
             b = grid[i, j + 1]
-            key = '-'.join(sorted([str(int(a)), str(int(b))]))
-            # if '0' not in key:
+            sk = sorted([int(a), int(b)])
+            key = (sk[0], sk[1])
             vert[key] = vert[key] + 1
 
     # compute horizontal PMF

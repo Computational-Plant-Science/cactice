@@ -33,10 +33,10 @@ def plot_grid(
 
 
 def plot_cell_dist(
-        dist: Dict[str, float],
+        dist: Dict[int, float],
         title: str = 'Cell distribution',
         cmap='Greens'):
-    ax = sns.barplot(x=list(dist.keys()), y=list(dist.values()), palette=cmap)
+    ax = sns.barplot(x=[str(k) for k in dist.keys()], y=list(dist.values()), palette=cmap)
     ax.set_title(title)
     # bars = plt.bar(dist.keys(), dist.values())
     # classes = [int(k) for k in dist.keys()]
@@ -63,7 +63,7 @@ def plot_undirected_bond_dist(
     plt.figure(figsize=(20, 6))
     plt.title(title)
     plt.bar(x_axis, dist.values(), 0.8)
-    plt.xticks(x_axis, dist.keys())
+    plt.xticks(x_axis, [f"{k[0]}-{k[1]}" for k in dist.keys()])
     plt.xlabel("Bond")
     plt.ylabel("Proportion")
     plt.legend()
