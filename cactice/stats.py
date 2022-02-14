@@ -25,7 +25,7 @@ def classes(grids: List[np.ndarray]) -> Dict[str, float]:
     return mass
 
 
-def undirected_transitions(grids: List[np.ndarray]) -> Tuple[Dict[str, float], Dict[str, float]]:
+def undirected_bonds(grids: List[np.ndarray]) -> Tuple[Dict[str, float], Dict[str, float]]:
     """
     Computes the probability mass function (PMF) for horizontal and vertical undirected transitions (class adjacencies) on the given grids.
 
@@ -67,10 +67,14 @@ def undirected_transitions(grids: List[np.ndarray]) -> Tuple[Dict[str, float], D
             if '0' not in key:
                 vert[key] = vert[key] + 1
 
-    # compute proportions
+    # compute horizontal probability mass
     horiz_uniq = len(horiz.keys())
-    horiz_mass = {k: round(v / sum(horiz.values()), horiz_uniq) for (k, v) in horiz.items()}
+    horiz_sum = sum(horiz.values())
+    horiz_mass = {k: round(v / horiz_sum, horiz_uniq) for (k, v) in horiz.items()} if horiz_sum > 0 else {}
+
+    # vertical prob. mass
     vert_uniq = len(vert.keys())
-    vert_mass = {k: round(v / sum(vert.values()), vert_uniq) for (k, v) in vert.items()}
+    vert_sum = sum(vert.values())
+    vert_mass = {k: round(v / vert_sum, vert_uniq) for (k, v) in vert.items()} if vert_sum > 0 else {}
 
     return horiz_mass, vert_mass

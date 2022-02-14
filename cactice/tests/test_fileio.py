@@ -5,8 +5,8 @@ import numpy.testing as npt
 
 from cactice.fileio import read_grid_txt, read_grids_csv
 
-tiles_path = 'testdata/tiles_sample1.txt'
-csv_path = 'testdata/grids_sample1.csv'
+tiles_path = 'testdata/grid.txt'
+csv_path = 'testdata/grids.csv'
 
 
 def test_read_grid_txt():
