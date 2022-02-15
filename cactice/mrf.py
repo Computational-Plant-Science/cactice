@@ -7,6 +7,7 @@ import numpy as np
 from numpy.random import choice, RandomState
 
 import cactice.stats as stats
+from cactice.neighbors import Neighbors
 
 # bond interaction signature
 # params:
@@ -19,7 +20,7 @@ Interaction = Callable[[np.ndarray, Tuple[int, int], Tuple[int, int]], float]
 
 def bond_energies(
         grid: np.ndarray,
-        interaction: Interaction,) -> Dict[Tuple[Tuple[int, int], Tuple[int, int]], float]:
+        interaction: Interaction) -> Dict[Tuple[Tuple[int, int], Tuple[int, int]], float]:
     """
     Computes cardinal-direction bonds and bond energies for the given grid and interaction function.
 
@@ -90,7 +91,9 @@ def neighborhood_H(
 class MRF:
     def __init__(
             self,
-            interaction: Interaction,
+            neighbors: Neighbors = Neighbors.CARDINAL,
+            interaction: str = 'proportional',
+            # interaction: Interaction,
             J: float = 1.0,
             iterations: int = 250,
             threshold: float = 0.01,
@@ -98,20 +101,85 @@ class MRF:
         """
         Create a Markov random field model.
 
-        :param interaction: The bond interaction
+        :param neighbors: Which cells to consider part of each cell's neighborhood
+        :param interaction: The bond interaction ('proportional' or 'kronecker')
         :param J: The multiplier
         :param iterations: The number of iterations of the Metropolis algorithm to run
         :param threshold: The probability of accepting a detrimental update
         :param seed: The random seed
         """
 
-        self.__random_state = RandomState(seed)
-        self.__interaction: Interaction = interaction
+        self.__random_state: RandomState = RandomState(seed)
+        self.__neighbors: Neighbors = neighbors
+        self.__interaction: str = interaction
+        # self.__interaction: Interaction = interaction
         self.__J: float = J
         self.__iterations: int = iterations
         self.__threshold: float = threshold
         self.__train: List[np.ndarray] = []
-        self.__class_distribution = Dict[str, float]
+        self.__cell_distribution: Dict[int, float] = {}
+        self.__bond_distribution_horiz: Dict[Tuple[int, int], float] = {}
+        self.__bond_distribution_vert: Dict[Tuple[int, int], float] = {}
+
+    def __kronecker_interaction(
+            self,
+            grid: np.ndarray,
+            p1: Tuple[int, int],
+            p2: Tuple[int, int]) -> float:
+        """
+        Yields an interaction energy of 1 if the cells have the same class, otherwise 0.
+
+        :param grid: The grid
+        :param p1: The first cell location
+        :param p2: The second cell location
+        :return:
+        """
+
+        (i1, j1) = p1
+        (i2, j2) = p2
+        if abs(i1 - i2) > 1 or abs(j1 - j2) > 1:
+            raise ValueError(
+                f"Only immediately adjacent neighbors (in the 4 cardinal and 4 diagonal directions) are supported")
+
+        # TODO: check neighbor strategy and depth
+
+        v1 = int(grid[j1, i1])
+        v2 = int(grid[j2, i2])
+
+        if v1 == 0 or v2 == 0 or v1 != v2: return 0
+        else: return 1
+
+    def __proportional_interaction(
+            self,
+            grid: np.ndarray,
+            p1: Tuple[int, int],
+            p2: Tuple[int, int]) -> float:
+        """
+        Interprets adjacency probability mass as interaction energy.
+        Really just a lookup table on the bond distribution.
+
+        :param grid: The grid
+        :param p1: The first cell location
+        :param p2: The second cell location
+        :return: The interaction energy
+        """
+
+        (i1, j1) = p1
+        (i2, j2) = p2
+        if abs(i1 - i2) > 1 or abs(j1 - j2) > 1:
+            raise ValueError(
+                f"Only immediately adjacent neighbors (in the 4 cardinal and 4 diagonal directions) are supported")
+
+        # TODO: check neighbor strategy and depth
+
+        v1 = int(grid[j1, i1])
+        v2 = int(grid[j2, i2])
+        sk = sorted([v1, v2])
+        key = (sk[0], sk[1])
+
+        if v1 == 0 or v2 == 0: return 0
+        elif i1 == i2: return self.__bond_distribution_vert[key]
+        elif j1 == j2: return self.__bond_distribution_horiz[key]
 
     def fit(self, grids: List[np.ndarray]):
         """
@@ -119,9 +187,12 @@ class MRF:
         """
 
         self.__train = grids
-        self.__class_distribution = stats.classes(grids)
+        self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
+        self.__bond_distribution_horiz, self.__bond_distribution_vert = stats.undirected_bond_dist(
+            grids=grids,
+            exclude_zero=True)
 
-    def predict(self, grids: List[np.ndarray] = None):
+    def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:
         """
         Predict missing cells on the training grids or on the given grids (if provided).
         To generate entirely novel grids conditioned on the training set, provide a list of empty (zero-valued) arrays.
@@ -149,7 +220,7 @@ class MRF:
             updates: OrderedDict[Tuple[int, int], int] = collections.OrderedDict()
 
             # randomly initialize missing cells
-            for i, j in missing: pred[i, j] = choice(self.__class_distribution, 1)[0]
+            for i, j in missing: pred[i, j] = choice(self.__cell_distribution, 1)[0]
 
             # proceed while we haven't reached the cutoff point
             while accepted < self.__iterations and rejected < self.__iterations:
@@ -160,16 +231,23 @@ class MRF:
                 i, j = missing[random.randint(0, len(missing) - 1)]
 
                 # make random selection from class distribution
-                cell = choice(self.__class_distribution, 1)[0]
+                cell = choice(self.__cell_distribution, 1)[0]
                 pcpy[i, j] = cell
 
                 # compute the energy pre- and post-update and calculate difference
-                energy_old = neighborhood_H(pred, (i, j), self.__interaction)
-                energy_new = neighborhood_H(pcpy, (i, j), self.__interaction)
+                if self.__interaction == 'proportional':
+                    interaction: Interaction = self.__proportional_interaction
+                elif self.__interaction == 'kronecker':
+                    interaction: Interaction = self.__kronecker_interaction
+                else:
+                    raise ValueError(f"Unsupported interaction: {self.__interaction}")
+
+                energy_old = neighborhood_H(pred, (i, j), interaction)
+                energy_new = neighborhood_H(pcpy, (i, j), interaction)
                 difference = energy_new - energy_old
 
                 # compute the total and average energy corresponding to the new configuration
-                energy_ttl = H(np.vectorize(lambda x: float(x))(pcpy), self.__interaction)
+                energy_ttl = H(np.vectorize(lambda x: float(x))(pcpy), interaction)
                 energy_avg = energy_ttl / len([p for p in np.ravel(grid) if p != 0])
 
                 # if we lowered the energy (or random chance of detriment if we didn't), accept the update

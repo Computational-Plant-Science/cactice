@@ -15,7 +15,8 @@ def get_neighborhood(
         i: int,
         j: int,
         neighbors: Neighbors = Neighbors.CARDINAL,
-        layers: int = 1) -> Dict[Tuple[int, int], int]:
+        layers: int = 1,
+        exclude_zero: bool = False) -> Dict[Tuple[int, int], int]:
     """
     Computes the neighborhood around the given grid cell.
 
@@ -24,17 +25,19 @@ def get_neighborhood(
     :param j: The cell's column index
     :param neighbors: The cells to consider neighbors
     :param layers: The width of the neighborhood
+    :param exclude_zero: Whether to exclude zero-valued cells from neighborhoods (not counting the central cell)
     :return: A dictionary mapping relative locations from the central cell to neighboring cell values
     """
 
-    # proceed outward from the nearest layer
-    neighborhood = dict()
+    # set the center of the neighborhood
+    neighborhood = {(0, 0): grid[i, j]}
+
     for layer in range(1, layers + 1):
         # check if we're up against any boundaries
-        bt = (i - layer < 0)                # top
-        bb = i < (grid.shape[0] - layer)    # bottom
-        bl = (j - layer < 0)                # left
-        br = j < (grid.shape[1] - layer)    # right
+        bt = (i - layer < 0)                 # top
+        bb = i >= (grid.shape[0] - layer)    # bottom
+        bl = (j - layer < 0)                 # left
+        br = j >= (grid.shape[1] - layer)    # right
 
         # compute cardinal neighbors (set to None if on or beyond boundary)
         top = None if bt else grid[i - layer, j]
@@ -68,5 +71,10 @@ def get_neighborhood(
             # TODO: store off-cardinal/-diagonal neighbors
             pass
 
+    # optionally exclude zero-valued neighbors
+    if exclude_zero:
+        neighborhood = {k: v for k, v in neighborhood.items() if (k == (0, 0) or (k != (0, 0) and v != 0))}
+
     # return only non-None neighbors
-    return {k: v for k, v in neighborhood if v is not None}
+    return {k: v for k, v in neighborhood.items() if v is not None}
+

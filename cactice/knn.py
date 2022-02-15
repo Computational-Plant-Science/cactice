@@ -7,19 +7,26 @@ import numpy as np
 # TODO: more distance function options?
 from cactice.neighbors import get_neighborhood, Neighbors
 from cactice.distance import hamming_distance
+import cactice.stats as stats
 
 
 class KNN:
-    def __init__(self, k: int = 10, neighbors: Neighbors = Neighbors.CARDINAL, layers: int = 1):
+    def __init__(
+            self,
+            k: int = 10,
+            neighbors: Neighbors = Neighbors.CARDINAL,
+            layers: int = 1):
         """
         Create a K-nearest neighbors model.
 
         :param neighbors: Which adjacent cells to consider neighbors.
         :param layers: How many layers of adjacent cells to consider neighbors.
         """
-        self.__k = k
-        self.__neighbors = neighbors
-        self.__layers = layers
+        self.__k: int = k
+        self.__neighbors: Neighbors = neighbors
+        self.__layers: int = layers
+        self.__train: List[np.ndarray] = []
+        self.__cell_distribution: Dict[str, float] = {}
 
         # store neighborhoods as a list of grids,
         # each grid a dictionary mapping absolute cell coordinates (i, j) to neighborhoods,
@@ -28,20 +35,19 @@ class KNN:
 
     def fit(self, grids: List[np.ndarray]):
         """
-        Fit the model to the given grids (precompute neighborhoods).
+        Fit the model to the given grids.
         """
 
-        # set the training set
         self.__train = grids
+        self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
 
         # for each grid...
         for grid in grids:
             # compute neighborhood at each cell
             neighborhoods = {(i, j): get_neighborhood(grid, i, j, self.__neighbors, self.__layers) for i in range(0, grid.shape[0]) for j in range(0, grid.shape[1])}
-
             self.__neighborhoods.append(neighborhoods)
 
-    def predict(self, grids: List[np.ndarray] = None):
+    def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:
         """
         Predict missing cells on the training grids or on the given grids (if provided).
         To generate entirely novel grids conditioned on the training set, provide a list of empty (zero-valued) arrays.

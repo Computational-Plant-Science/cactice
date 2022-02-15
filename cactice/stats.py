@@ -20,7 +20,7 @@ def flatten(grids: List[np.ndarray]) -> List[int]:
 
 def cell_dist(
         grids: List[np.ndarray],
-        exclude_zero: bool = False) -> Dict[str, float]:
+        exclude_zero: bool = False) -> Dict[int, float]:
     """
     Computes the probability mass function (PMF) for classes (unique values) on the given grids.
 
@@ -33,7 +33,6 @@ def cell_dist(
     cells = flatten(grids)
 
     # optionally exclude zero-valued cells
-
     if exclude_zero:
         cells = [cell for cell in cells if cell != 0]
 
@@ -47,12 +46,12 @@ def cell_dist(
 
 def undirected_bond_dist(
         grids: List[np.ndarray],
-        exclude_zero: bool = False) -> Tuple[Dict[str, float], Dict[str, float]]:
+        exclude_zero: bool = False) -> Tuple[Dict[Tuple[int, int], float], Dict[Tuple[int, int], float]]:
     """
     Computes the probability mass function (PMF) for horizontal and vertical undirected transitions (class adjacencies) on the given grids.
 
     :param grids: A list of grids
-    :param exclude_zeros: Exclude zero-valued cells (interpreted to be missing values)
+    :param exclude_zero: Exclude zero-valued cells (interpreted to be missing values)
     :return: A dictionary with key as random variable and value as probablity mass.
     """
 
@@ -77,17 +76,17 @@ def undirected_bond_dist(
 
         # count horizontal bonds
         for i, j in product(range(w - 1), range(h)):
-            a = grid[i, j]
-            b = grid[i + 1, j]
-            sk = sorted([int(a), int(b)])
+            v1 = grid[i, j]
+            v2 = grid[i + 1, j]
+            sk = sorted([int(v1), int(v2)])
             key = (sk[0], sk[1])
             horiz[key] = horiz[key] + 1
 
         # count vertical bonds
         for i, j in product(range(w), range(h - 1)):
-            a = grid[i, j]
-            b = grid[i, j + 1]
-            sk = sorted([int(a), int(b)])
+            v1 = grid[i, j]
+            v2 = grid[i, j + 1]
+            sk = sorted([int(v1), int(v2)])
             key = (sk[0], sk[1])
             vert[key] = vert[key] + 1
 

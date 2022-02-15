@@ -1,5 +1,7 @@
 import random
-from typing import List
+from typing import List, Dict
+from pprint import pprint
+import logging
 
 import numpy as np
 
@@ -8,7 +10,10 @@ from cactice.neighbors import Neighbors, get_neighborhood
 
 
 class RNS:
-    def __init__(self, neighbors: Neighbors = Neighbors.CARDINAL, layers: int = 1):
+    def __init__(
+            self,
+            neighbors: Neighbors = Neighbors.CARDINAL,
+            layers: int = 1):
         """
         Create a random neighbor selection model.
         This model assigns to each cell by simply selecting at random from its neighbors.
@@ -17,36 +22,74 @@ class RNS:
         :param neighbors: The cells to consider part of the neighborhood.
         :param layers: The width of the neighborhood
         """
-        self.__neighbors = neighbors
-        self.__layers = layers
+        self.__neighbors: Neighbors = neighbors
+        self.__layers: int = layers
+        self.__train: List[np.ndarray] = []
+        self.__cell_distribution: Dict[str, float] = {}
+        self.__logger = logging.getLogger(__name__)
 
-    def predict(self, grids: List[np.ndarray] = None):
+    def fit(self, grids: List[np.ndarray] = None):
+        """
+        Fit the model to the given grids.
+        """
+
+        self.__train = grids
+        self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
+
+    def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:
+        """
+        Predict missing cells on the training grids or on the given grids (if provided).
+        To generate entirely novel grids conditioned on the training set, provide a list of empty (zero-valued) arrays.
+
+        :param grids: The grids to predict on (the training set will be used otherwise)
+        :return: The grids with missing values filled in.
+        """
+
         # initialize grids to predict on
-        grid_predictions = [np.copy(grid) for grid in grids]
-
-        # compute class distribution
-        class_distribution = stats.classes(grids)
+        grid_predictions = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]
 
         for gi, grid in enumerate(grid_predictions):
             # find cells to predict (missing locations)
             rows = range(0, grid.shape[0])
             cols = range(0, grid.shape[1])
-            missing = [(i, j) for i in rows for j in cols if grid[i, j] == 0]
+            grid_pred = grid_predictions[gi].copy()
+            missing = [(i, j) for i in rows for j in cols if grid_pred[i, j] == 0]
+
+            # if this grid has no missing locations, skip it
+            if len(missing) == 0: continue
 
             # predict cells one by one
-            for i, j in missing:
+            for (i, j) in missing:
                 # get the missing location's neighbors
-                neighborhood = get_neighborhood(grid, i, j, self.__neighbors, self.__layers)
-                neighbors = list(neighborhood.values())[1:]  # first element is central cell
-                any_neighbors = len(neighborhood.keys()) > 1
+                neighborhood = get_neighborhood(
+                    grid=grid,
+                    i=i,
+                    j=j,
+                    neighbors=self.__neighbors,
+                    layers=self.__layers,
+                    exclude_zero=True)
+
+                # ignore central cell
+                del neighborhood[(0, 0)]
+
+                # pull out neighbor cell values
+                neighbors = list(neighborhood.values())
 
                 # predict cell value by making a random selection from its neighbors, if any
                 # or if none, choosing randomly according to the observed class distribution
-                cell_pred = random.choice(neighbors) if any_neighbors else np.random.choice(
-                    list(class_distribution.keys()),
-                    list(class_distribution.values()))
+                if len(neighbors) > 0:
+                    self.__logger.debug(f"Assigning location ({i}, {j}) from neighbors")
+                    cell_pred = random.choice(neighbors)
+                else:
+                    self.__logger.debug(f"Location ({i}, {j}) has no neighbors, sampling from distribution")
+                    cell_pred = np.random.choice(
+                        a=list(self.__cell_distribution.keys()),
+                        p=list(self.__cell_distribution.values()))
 
                 # set the cell in the corresponding grid
-                grid_predictions[gi][i, j] = cell_pred
+                grid_pred[i, j] = cell_pred
+
+            # set the predicted grid
+            grid_predictions[gi] = grid_pred
 
         return grid_predictions
