@@ -220,7 +220,7 @@ class MRF:
             updates: OrderedDict[Tuple[int, int], int] = collections.OrderedDict()
 
             # randomly initialize missing cells
-            for i, j in missing: pred[i, j] = choice(self.__cell_distribution, 1)[0]
+            for i, j in missing: pred[i, j] = choice(list(self.__cell_distribution.keys()), 1)[0]
 
             # proceed while we haven't reached the cutoff point
             while accepted < self.__iterations and rejected < self.__iterations:
@@ -231,7 +231,7 @@ class MRF:
                 i, j = missing[random.randint(0, len(missing) - 1)]
 
                 # make random selection from class distribution
-                cell = choice(self.__cell_distribution, 1)[0]
+                cell = choice(list(self.__cell_distribution.keys()), 1)[0]
                 pcpy[i, j] = cell
 
                 # compute the energy pre- and post-update and calculate difference

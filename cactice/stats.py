@@ -78,6 +78,11 @@ def undirected_bond_dist(
         for i, j in product(range(w - 1), range(h)):
             v1 = grid[i, j]
             v2 = grid[i + 1, j]
+
+            # optionally exclude bonds where either cell is zero-valued (missing)
+            if exclude_zero and (v1 == 0 or v2 == 0):
+                continue
+
             sk = sorted([int(v1), int(v2)])
             key = (sk[0], sk[1])
             horiz[key] = horiz[key] + 1
@@ -86,6 +91,11 @@ def undirected_bond_dist(
         for i, j in product(range(w), range(h - 1)):
             v1 = grid[i, j]
             v2 = grid[i, j + 1]
+
+            # optionally exclude bonds where either cell is zero-valued (missing)
+            if exclude_zero and (v1 == 0 or v2 == 0):
+                continue
+
             sk = sorted([int(v1), int(v2)])
             key = (sk[0], sk[1])
             vert[key] = vert[key] + 1
