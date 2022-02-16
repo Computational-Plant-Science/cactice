@@ -1,10 +1,10 @@
 from typing import List, Dict, Tuple
 from itertools import islice
 from collections import Counter
+import logging
 
 import numpy as np
 
-# TODO: more distance function options?
 from cactice.neighbors import get_neighborhood, Neighbors
 from cactice.distance import hamming_distance
 import cactice.stats as stats
@@ -22,6 +22,8 @@ class KNN:
         :param neighbors: Which adjacent cells to consider neighbors.
         :param layers: How many layers of adjacent cells to consider neighbors.
         """
+
+        self.__logger = logging.getLogger(__name__)
         self.__k: int = k
         self.__neighbors: Neighbors = neighbors
         self.__layers: int = layers
@@ -66,26 +68,56 @@ class KNN:
             # find cells to predict (missing locations)
             rows = range(0, grid.shape[0])
             cols = range(0, grid.shape[1])
-            missing = [(i, j) for i in rows for j in cols if grid[i, j] == 0]
+            grid_pred = grid_predictions[gi].copy()
+            missing = [(i, j) for i in rows for j in cols if grid_pred[i, j] == 0]
+
+            # if this grid has no missing locations, skip it
+            if len(missing) == 0: continue
 
             # predict cells one by one
             for i, j in missing:
                 # get the missing location's neighbors
-                neighborhood = get_neighborhood(grid, i, j, self.__neighbors, self.__layers)
+                neighborhood = get_neighborhood(
+                    grid=grid,
+                    i=i,
+                    j=j,
+                    neighbors=self.__neighbors,
+                    layers=self.__layers,
+                    exclude_zero=True)
 
-                # compute distance from this neighborhood to every training neighborhood
-                distances = {nh[(0, 0)]: hamming_distance(list(neighborhood.values()), list(nh.values())) for nh in neighborhoods}
+                # ignore central cell
+                del neighborhood[(0, 0)]
 
-                # sort distances ascending
-                distances = dict(sorted(distances.items(), key=lambda k, v: v, reverse=True))
+                # pull out neighbor cell values
+                neighbors = list(neighborhood.values())
 
-                # keep k most similar neighborhoods (k nearest neighbor neighborhoods)
-                distances = dict(islice(distances, self.__k))
+                if len(neighbors) > 0:
+                    self.__logger.debug(f"Assigning location ({i}, {j}) via KNN")
 
-                # count frequency of each cell value in and pick the most common (ties broken randomly)
-                cell_prediction = Counter(distances.values()).most_common(1)[0][0]
+                    # compute distance from this neighborhood to every training neighborhood
+                    distances = {nh[(0, 0)]: hamming_distance(list(neighborhood.values()), list(nh.values())) for nh in neighborhoods}
+
+                    # sort distances ascending
+                    distances = dict(sorted(distances.items(), key=lambda k, v: v, reverse=True))
+
+                    # keep k most similar neighborhoods (k nearest neighbor neighborhoods)
+                    distances = dict(islice(distances, self.__k))
+
+                    # count frequency of each cell value in and pick the most common (ties broken randomly)
+                    cell_pred = Counter(distances.values()).most_common(1)[0][0]
+                else:
+                    self.__logger.debug(
+                        f"Location ({i}, {j}) has no neighbors, assigning by sampling from cell distribution")
+
+                    # sample randomly according to cell class distribution
+                    cell_pred = np.random.choice(
+                        a=list(self.__cell_distribution.keys()),
+                        p=list(self.__cell_distribution.values()))
 
                 # set the cell in the corresponding grid
-                grid_predictions[gi][i, j] = cell_prediction
+                grid_pred[i, j] = cell_pred
+
+            # set the predicted grid
+            grid_predictions[gi] = grid_pred
 
         return grid_predictions

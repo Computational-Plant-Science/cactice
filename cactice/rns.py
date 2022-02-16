@@ -22,11 +22,12 @@ class RNS:
         :param neighbors: The cells to consider part of the neighborhood.
         :param layers: The width of the neighborhood
         """
+
+        self.__logger = logging.getLogger(__name__)
         self.__neighbors: Neighbors = neighbors
         self.__layers: int = layers
         self.__train: List[np.ndarray] = []
         self.__cell_distribution: Dict[str, float] = {}
-        self.__logger = logging.getLogger(__name__)
 
     def fit(self, grids: List[np.ndarray] = None):
         """
@@ -78,10 +79,13 @@ class RNS:
                 # predict cell value by making a random selection from its neighbors, if any
                 # or if none, choosing randomly according to the observed class distribution
                 if len(neighbors) > 0:
-                    self.__logger.debug(f"Assigning location ({i}, {j}) from neighbors")
+                    self.__logger.debug(f"Assigning location ({i}, {j}) via RNS")
                     cell_pred = random.choice(neighbors)
                 else:
-                    self.__logger.debug(f"Location ({i}, {j}) has no neighbors, sampling from distribution")
+                    self.__logger.debug(
+                        f"Location ({i}, {j}) has no neighbors, assigning by sampling from cell distribution")
+
+                    # sample randomly according to cell class distribution
                     cell_pred = np.random.choice(
                         a=list(self.__cell_distribution.keys()),
                         p=list(self.__cell_distribution.values()))
