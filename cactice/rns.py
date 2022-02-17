@@ -24,6 +24,7 @@ class RNS:
         """
 
         self.__logger = logging.getLogger(__name__)
+        self.__fit: bool = False
         self.__neighbors: Neighbors = neighbors
         self.__layers: int = layers
         self.__train: List[np.ndarray] = []
@@ -36,6 +37,7 @@ class RNS:
 
         self.__train = grids
         self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
+        self.__fit = True
 
     def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:
         """
@@ -45,6 +47,9 @@ class RNS:
         :param grids: The grids to predict on (the training set will be used otherwise)
         :return: The grids with missing values filled in.
         """
+
+        if not self.__fit:
+            raise ValueError(f"Model must be fit before predictions can be made!")
 
         # initialize grids to predict on
         grid_predictions = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]

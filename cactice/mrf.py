@@ -2,12 +2,13 @@ import collections
 import random
 from itertools import product
 from typing import List, Tuple, Callable, Dict, OrderedDict
+import logging
 
 import numpy as np
 from numpy.random import choice, RandomState
 
 import cactice.stats as stats
-from cactice.neighbors import Neighbors
+from cactice.neighbors import Neighbors, get_neighborhood, get_neighborhoods
 
 # bond interaction signature
 # params:
@@ -20,9 +21,11 @@ Interaction = Callable[[np.ndarray, Tuple[int, int], Tuple[int, int]], float]
 
 def bond_energies(
         grid: np.ndarray,
+        neighbors: Neighbors,
+        layers: int,
         interaction: Interaction) -> Dict[Tuple[Tuple[int, int], Tuple[int, int]], float]:
     """
-    Computes cardinal-direction bonds and bond energies for the given grid and interaction function.
+    Computes bonds and bond energies for the given grid and interaction function.
 
     TODO: allow neighbor specification (cardinal, diagonal, complete)
 
@@ -35,19 +38,23 @@ def bond_energies(
     h, w = grid.shape
 
     # horizontal interactions
-    for i, j in product(range(w - 1), range(h)):
+    for i, j in product(range(h - 1), range(w)):
         e = interaction(grid, (i, j), (i + 1, j))
         bonds[((i, j), (i + 1, j))] = e
 
     # vertical interactions
-    for i, j in product(range(w), range(h - 1)):
+    for i, j in product(range(h), range(w - 1)):
         e = interaction(grid, (i, j), (i, j + 1))
         bonds[((i, j), (i, j + 1))] = e
 
     return bonds
 
 
-def H(grid: np.ndarray, interaction: Interaction, J: float = 1.0) -> float:
+def H(grid: np.ndarray,
+      neighbors: Neighbors,
+      layers: int,
+      interaction: Interaction,
+      J: float = 1.0) -> float:
     """
     Computes the Hamiltonian (energy function) of the given grid
 
@@ -56,7 +63,7 @@ def H(grid: np.ndarray, interaction: Interaction, J: float = 1.0) -> float:
     :param J: The multiplier
     :return: The energy
     """
-    bonds = bond_energies(grid, interaction)
+    bonds = bond_energies(grid, neighbors, layers, interaction)
     e = sum(bonds.values())
     return J * e
 
@@ -64,6 +71,8 @@ def H(grid: np.ndarray, interaction: Interaction, J: float = 1.0) -> float:
 def neighborhood_H(
         grid: np.ndarray,
         cell: Tuple[int, int],
+        neighbors: Neighbors,
+        layers: int,
         interaction: Interaction,
         J: float = 1.0) -> float:
     """
@@ -76,14 +85,28 @@ def neighborhood_H(
     :return: The energy
     """
 
-    h, w = grid.shape
     i, j = cell
     e = 0
 
-    if i > 0: e += interaction(grid, (i - 1, j), (i, j))
-    if i < w - 1: e += interaction(grid, (i, j), (i + 1, j))
-    if j > 0: e += interaction(grid, (i, j - 1), (i, j))
-    if j < h - 1: e += interaction(grid, (i, j), (i, j + 1))
+    neighborhood = get_neighborhood(
+        grid=grid,
+        i=i,
+        j=j,
+        neighbors=neighbors,
+        layers=layers,
+        exclude_zero=True)
+
+    # ignore central cell
+    # TODO: make this an option on `get_neighborhood()`
+    del neighborhood[(0, 0)]
+
+    for (ni, nj), nv in neighborhood.items():
+        e += interaction(grid, (i + ni, j + nj), (i, j))
+
+    # if i > 0: e += interaction(grid, (i - 1, j), (i, j))
+    # if i < w - 1: e += interaction(grid, (i, j), (i + 1, j))
+    # if j > 0: e += interaction(grid, (i, j - 1), (i, j))
+    # if j < h - 1: e += interaction(grid, (i, j), (i, j + 1))
 
     return J * e
 
@@ -92,6 +115,7 @@ class MRF:
     def __init__(
             self,
             neighbors: Neighbors = Neighbors.CARDINAL,
+            layers: int = 1,
             interaction: str = 'proportional',
             # interaction: Interaction,
             J: float = 1.0,
@@ -109,8 +133,11 @@ class MRF:
         :param seed: The random seed
         """
 
+        self.__logger = logging.getLogger(__name__)
+        self.__fit: bool = False
         self.__random_state: RandomState = RandomState(seed)
         self.__neighbors: Neighbors = neighbors
+        self.__layers: int = layers
         self.__interaction: str = interaction
         # self.__interaction: Interaction = interaction
         self.__J: float = J
@@ -120,6 +147,11 @@ class MRF:
         self.__cell_distribution: Dict[int, float] = {}
         self.__bond_distribution_horiz: Dict[Tuple[int, int], float] = {}
         self.__bond_distribution_vert: Dict[Tuple[int, int], float] = {}
+
+        # store neighborhoods as a list of grids,
+        # each grid a dictionary mapping absolute cell coordinates (i, j) to neighborhoods,
+        # each neighborhood a dictionary mapping relative cell coordinates (i, j) to values
+        self.__neighborhoods: List[Dict[Tuple[int, int], Dict[Tuple[int, int], int]]] = []
 
     def __kronecker_interaction(
             self,
@@ -143,8 +175,8 @@ class MRF:
 
         # TODO: check neighbor strategy and depth
 
-        v1 = int(grid[j1, i1])
-        v2 = int(grid[j2, i2])
+        v1 = int(grid[i1, j1])
+        v2 = int(grid[i2, j2])
 
         if v1 == 0 or v2 == 0 or v1 != v2: return 0
         else: return 1
@@ -172,8 +204,8 @@ class MRF:
 
         # TODO: check neighbor strategy and depth
 
-        v1 = int(grid[j1, i1])
-        v2 = int(grid[j2, i2])
+        v1 = int(grid[i1, j1])
+        v2 = int(grid[i2, j2])
         sk = sorted([v1, v2])
         key = (sk[0], sk[1])
 
@@ -192,6 +224,14 @@ class MRF:
             grids=grids,
             exclude_zero=True)
 
+        # for each grid...
+        for grid in grids:
+            # create dictionary mapping cell location to neighborhood
+            neighborhoods = get_neighborhoods(grid, self.__neighbors, self.__layers, exclude_zero=True)
+            self.__neighborhoods.append(neighborhoods)
+
+        self.__fit = True
+
     def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:
         """
         Predict missing cells on the training grids or on the given grids (if provided).
@@ -201,6 +241,9 @@ class MRF:
         :param grids: The grids to predict on (the training set will be used otherwise)
         :return: The grids with missing values filled in.
         """
+
+        if not self.__fit:
+            raise ValueError(f"Model must be fit before predictions can be made!")
 
         # initialize grids to predict on
         grid_predictions = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]
@@ -242,13 +285,14 @@ class MRF:
                 else:
                     raise ValueError(f"Unsupported interaction: {self.__interaction}")
 
-                energy_old = neighborhood_H(pred, (i, j), interaction)
-                energy_new = neighborhood_H(pcpy, (i, j), interaction)
+                energy_old = neighborhood_H(pred, (i, j), self.__neighbors, self.__layers, interaction)
+                energy_new = neighborhood_H(pcpy, (i, j), self.__neighbors, self.__layers, interaction)
                 difference = energy_new - energy_old
 
                 # compute the total and average energy corresponding to the new configuration
-                energy_ttl = H(np.vectorize(lambda x: float(x))(pcpy), interaction)
-                energy_avg = energy_ttl / len([p for p in np.ravel(grid) if p != 0])
+                values_ttl = len([p for p in np.ravel(grid) if p != 0])
+                energy_ttl = H(np.vectorize(lambda x: float(x))(pcpy), self.__neighbors, self.__layers, interaction)
+                energy_avg = (energy_ttl / values_ttl) if values_ttl > 0 else 0
 
                 # if we lowered the energy (or random chance of detriment if we didn't), accept the update
                 if difference < 0 or self.__random_state.uniform() > (1 - self.__threshold):

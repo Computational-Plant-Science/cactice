@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from cactice.neighbors import get_neighborhood, Neighbors
+from cactice.neighbors import get_neighborhood, get_neighborhoods, Neighbors
 from cactice.distance import hamming_distance
 import cactice.stats as stats
 
@@ -24,6 +24,7 @@ class KNN:
         """
 
         self.__logger = logging.getLogger(__name__)
+        self.__fit: bool = False
         self.__k: int = k
         self.__neighbors: Neighbors = neighbors
         self.__layers: int = layers
@@ -45,9 +46,11 @@ class KNN:
 
         # for each grid...
         for grid in grids:
-            # compute neighborhood at each cell
-            neighborhoods = {(i, j): get_neighborhood(grid, i, j, self.__neighbors, self.__layers) for i in range(0, grid.shape[0]) for j in range(0, grid.shape[1])}
+            # create dictionary mapping cell location to neighborhood
+            neighborhoods = get_neighborhoods(grid, self.__neighbors, self.__layers, exclude_zero=True)
             self.__neighborhoods.append(neighborhoods)
+
+        self.__fit = True
 
     def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:
         """
@@ -57,6 +60,9 @@ class KNN:
         :param grids: The grids to predict on (if none are provided the training set will be used).
         :return: The predicted grids.
         """
+
+        if not self.__fit:
+            raise ValueError(f"Model must be fit before predictions can be made!")
 
         # initialize grids to predict on
         grid_predictions = [np.copy(grid) for grid in (grids if grids is not None else self.__train)]

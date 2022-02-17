@@ -25,7 +25,7 @@ def get_neighborhood(
     :param j: The cell's column index
     :param neighbors: The cells to consider neighbors
     :param layers: The width of the neighborhood
-    :param exclude_zero: Whether to exclude zero-valued cells from neighborhoods (not counting the central cell)
+    :param exclude_zero: Whether to exclude zero-valued neighbors
     :return: A dictionary mapping relative locations from the central cell to neighboring cell values
     """
 
@@ -34,10 +34,10 @@ def get_neighborhood(
 
     for layer in range(1, layers + 1):
         # check if we're up against any boundaries
-        bt = (i - layer < 0)                 # top
-        bb = i >= (grid.shape[0] - layer)    # bottom
-        bl = (j - layer < 0)                 # left
-        br = j >= (grid.shape[1] - layer)    # right
+        bt = (i - layer < 0)  # top
+        bb = i >= (grid.shape[0] - layer)  # bottom
+        bl = (j - layer < 0)  # left
+        br = j >= (grid.shape[1] - layer)  # right
 
         # compute cardinal neighbors (set to None if on or beyond boundary)
         top = None if bt else grid[i - layer, j]
@@ -78,3 +78,20 @@ def get_neighborhood(
     # return only non-None neighbors
     return {k: v for k, v in neighborhood.items() if v is not None}
 
+
+def get_neighborhoods(
+        grid: np.ndarray,
+        neighbors: Neighbors = Neighbors.CARDINAL,
+        layers: int = 1,
+        exclude_zero: bool = False):
+    """
+    Computes all cell neighborhoods in the given grid.
+
+    :param grid: The grid
+    :param neighbors: The cells to consider neighbors
+    :param layers: The width of the neighborhood
+    :param exclude_zero: Whether to exclude zero-valued neighbors
+    :return: A dictionary mapping cell locations to dictionaries mapping relative locations around the central cell to neighboring values
+    """
+    return {(i, j): get_neighborhood(grid, i, j, neighbors, layers, exclude_zero) for i in
+            range(0, grid.shape[0]) for j in range(0, grid.shape[1])}
