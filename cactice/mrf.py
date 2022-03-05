@@ -93,7 +93,7 @@ def neighborhood_H(
         i=i,
         j=j,
         neighbors=neighbors,
-        layers=layers,
+        width=layers,
         exclude_zero=True)
 
     # ignore central cell

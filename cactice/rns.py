@@ -72,7 +72,7 @@ class RNS:
                     i=i,
                     j=j,
                     neighbors=self.__neighbors,
-                    layers=self.__layers,
+                    width=self.__layers,
                     exclude_zero=True)
 
                 # ignore central cell
