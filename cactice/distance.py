@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 
 def hamming_distance(a: List[int], b: List[int]) -> int:
@@ -14,3 +14,9 @@ def hamming_distance(a: List[int], b: List[int]) -> int:
     b_str = ''.join([str(i) for i in b])
 
     return sum(ca != cb for ca, cb in zip(a_str, b_str))
+
+
+def frechet_distance(a: List[Tuple[float, float]], b: List[Tuple[float, float]]) -> float:
+    # TODO
+    # reference impl: https://gist.github.com/MaxBareiss/ba2f9441d9455b56fbc9
+    pass

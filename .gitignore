@@ -3,3 +3,4 @@
 venv
 *.pyc
 **/*_field.csv
+notebooks/grid_chi2.ipynb
