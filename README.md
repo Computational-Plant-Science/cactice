@@ -1,6 +1,7 @@
+# cactice
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [CACTICE](#cactice)
   - [Overview](#overview)
@@ -8,15 +9,18 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# CACTICE
+`cactice` stands for **c**omputing **a**gricultural **c**rop lat**tice**s. This repository explores questions about regular spatial arrangements of plant phenotypes (e.g., in a field or greenhouse). For instance:
 
-A Python3 toolkit for **C**omputing **A**gricultural **C**ategorical lat**TICE**s: category-valued grids such as crop species or phenotype classes arranged in a field or greenhouse.
+- How does environmental context influence morphological development?
+- What mechanisms underlie spatial patterning?
+- Is a given phenotype distribution highly structured or mostly random? In either case, why?
+- If structure is evident, can we formalize or predict it? If so, from which (and how much) information?
 
-**This repository is experimental and under active development.**
+**This repository is exploratory, unstable, and currently very minimal.**
 
 ## Overview
 
-TODO
+Check out the `notebooks/explore.ipynb` notebook for some examples.
 
 ## Conventions
 
