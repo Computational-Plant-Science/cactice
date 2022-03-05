@@ -25,8 +25,8 @@ def get_band(
         raise ValueError(f"Band starting distance must be greater than 0 and less than min(grid length, grid width)")
 
     band = {}
-    for ii in range(max(i - start, 0), min(i + 2, grid.shape[0])):
-        for jj in range(max(j - 1, 0), min(j + 2, grid.shape[1])):
+    for ii in range(max(i - start, 0), min(i + start + 1, grid.shape[0])):
+        for jj in range(max(j - start, 0), min(j + start + 1, grid.shape[1])):
             coords = (ii, jj) if absolute_coords else (ii - i, jj - j)
             band[coords] = grid[ii, jj]
 
