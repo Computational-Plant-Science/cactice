@@ -112,22 +112,22 @@ def test_get_band():
 
     # immediate 8-cell (cardinal & diagonal) neighborhood
     start = 1
-    band = get_band(grid, i=cell[0], j=cell[1], start=start)
+    band = get_band(grid, i=cell[0], j=cell[1], distance=start)
     assert len(band.keys()) == 8
     assert band[(start, start)] == grid[(cell[0] + start, cell[1] + start)]
     assert band[(-1 * start, -1 * start)] == grid[(cell[0] - start, cell[1] - start)]
-    band = get_band(grid, i=cell[0], j=cell[1], start=start, absolute_coords=True)
+    band = get_band(grid, i=cell[0], j=cell[1], distance=start, absolute_coords=True)
     assert len(band.keys()) == 8
     assert band[(cell[0] + start, cell[1] + start)] == grid[(cell[0] + start, cell[1] + start)]
     assert band[(cell[0] - start, cell[1] - start)] == grid[(cell[0] - start, cell[1] - start)]
 
     # the next layer out
     start = 2
-    band = get_band(grid, i=cell[0], j=cell[1], start=start)
+    band = get_band(grid, i=cell[0], j=cell[1], distance=start)
     assert len(band.keys()) == 16
     assert band[(start, start)] == grid[(cell[0] + start, cell[1] + start)]
     assert band[(-1 * start, -1 * start)] == grid[(cell[0] - start, cell[1] - start)]
-    band = get_band(grid, i=cell[0], j=cell[1], start=start, absolute_coords=True)
+    band = get_band(grid, i=cell[0], j=cell[1], distance=start, absolute_coords=True)
     assert len(band.keys()) == 16
     assert band[(cell[0] + start, cell[1] + start)] == grid[(cell[0] + start, cell[1] + start)]
     assert band[(cell[0] - start, cell[1] - start)] == grid[(cell[0] - start, cell[1] - start)]

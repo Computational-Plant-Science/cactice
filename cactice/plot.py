@@ -18,7 +18,7 @@ def plot_grid(
         patches: List[Patch] = None) -> None:
     # plt.figure(figsize=(20, 20))
     values = list(set(np.ravel(grid)))
-    labels = np.vectorize(lambda x: str(int(x)) if x != 0 else '')(grid)
+    labels = np.vectorize(lambda x: str(x) if x != 0 else '')(grid)
     ax = sns.heatmap(
         grid,
         square=True,
