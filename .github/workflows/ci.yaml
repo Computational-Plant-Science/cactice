@@ -45,7 +45,7 @@ jobs:
           COVERALLS_PARALLEL: true
         run: |
           coverage run --source=cactice -m pytest /home/runner/work/cactice/cactice/cactice/tests -s
-          coveralls
+          coveralls --finish
   publish:
     needs: [tests]
     runs-on: ubuntu-latest
