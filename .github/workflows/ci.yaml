@@ -44,7 +44,7 @@ jobs:
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
         run: |
-          coverage run --source=pycyapi -m pytest /home/runner/work/cactice/cactice/cactice/tests -s
+          coverage run --source=cactice -m pytest /home/runner/work/cactice/cactice/cactice/tests -s
           coveralls
   publish:
     needs: [tests]
@@ -70,16 +70,14 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          # old_version=$(pip install cactice==random 2>&1 >/dev/null | sed 's|.*, \([^ ]*\)).*|\1|g' | head -n 1 | xargs)
-          # new_version=$(pip show pycyapi | sed 's|.*Version: \([^ ]*\).*|\1|g' | sed -n 2p)
-          # echo "$old_version"
-          # echo "$new_version"
-          # if ! [[ "$new_version" = "$old_version" ]]; then
-          #   python setup.py sdist bdist_wheel
-          #   python -m twine upload dist/*
-          # fi
-          python setup.py sdist bdist_wheel
-          python -m twine upload dist/*
+          old_version=$(pip install cactice==random 2>&1 >/dev/null | sed 's|.*, \([^ ]*\)).*|\1|g' | head -n 1 | xargs)
+          new_version=$(pip show cactice | sed 's|.*Version: \([^ ]*\).*|\1|g' | sed -n 2p)
+          echo "$old_version"
+          echo "$new_version"
+          if ! [[ "$new_version" = "$old_version" ]]; then
+            python setup.py sdist bdist_wheel
+            python -m twine upload dist/*
+          fi
       - name: Slack success notification
         uses: rtCamp/action-slack-notify@v2
         env:
