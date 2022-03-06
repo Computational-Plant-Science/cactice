@@ -1,5 +1,9 @@
 # cactice
 
+![CI](https://github.com/Computational-Plant-Science/cactice/workflows/CI/badge.svg)
+[![PyPI version](https://badge.fury.io/py/cactice.svg)](https://badge.fury.io/py/cactice)
+[![Coverage Status](https://coveralls.io/repos/github/Computational-Plant-Science/cactice/badge.svg?branch=main)](https://coveralls.io/github/Computational-Plant-Science/cactice?branch=main)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
