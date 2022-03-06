@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='cactice',
-    version='0.0.1',
+    version='0.0.2',
     description='Computing Agricultural Crop latTICEs',
     long_description=long_description,
     long_description_content_type="text/markdown",
