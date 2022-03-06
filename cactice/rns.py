@@ -6,7 +6,7 @@ import logging
 import numpy as np
 
 import cactice.stats as stats
-from cactice.neighbors import Neighbors, get_neighborhood
+from cactice.grids import Neighbors, get_neighborhood
 
 
 class RNS:

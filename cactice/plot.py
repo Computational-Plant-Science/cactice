@@ -1,8 +1,8 @@
 import math
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import ConnectionPatch
+from matplotlib.patches import ConnectionPatch, Patch
 from matplotlib.ticker import MaxNLocator
 import matplotlib.cm as cm
 import numpy as np
@@ -15,7 +15,7 @@ def plot_grid(
         grid: np.ndarray,
         title: Optional[str] = None,
         cmap='Greens',
-        patch=None) -> None:
+        patches: List[Patch] = None) -> None:
     # plt.figure(figsize=(20, 20))
     values = list(set(np.ravel(grid)))
     labels = np.vectorize(lambda x: str(int(x)) if x != 0 else '')(grid)
@@ -30,7 +30,8 @@ def plot_grid(
         vmax=5 if 0 in values else 4,
         alpha=0.5)
     if title: ax.set_title(title)
-    if patch is not None: ax.add_patch(patch)
+    if patches is not None:
+        for patch in patches: ax.add_patch(patch)
     plt.show()
 
 

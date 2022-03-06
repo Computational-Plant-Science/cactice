@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 
-from cactice.neighbors import get_neighborhood, get_neighborhoods, Neighbors
+from cactice.grids import get_neighborhood, get_neighborhoods, Neighbors
 from cactice.distance import hamming_distance
 import cactice.stats as stats
 
