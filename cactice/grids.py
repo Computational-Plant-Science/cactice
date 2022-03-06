@@ -18,6 +18,7 @@ def get_neighborhood(
         i: int,
         j: int,
         neighbors: Neighbors = Neighbors.CARDINAL,
+        include_center: bool = False,
         exclude_zero: bool = False,
         absolute_coords: bool = False) -> Dict[Tuple[int, int], int]:
     """
@@ -27,31 +28,32 @@ def get_neighborhood(
     :param i: The cell's row index
     :param j: The cell's column index
     :param neighbors: The cells to consider neighbors
+    :param include_center: Whether to include the central cell in the neighborhood
     :param exclude_zero: Whether to exclude zero-valued neighbors
     :param absolute_coords: Use absolute coordinates rather than location relative to the central cell (the default)
     :return: A dictionary mapping cell locations to their respective values
     """
 
-    # set the center of the neighborhood
-    # neighborhood = {(0, 0): grid[i, j]}
+    # optionally include the central cell in the neighborhood we'll return
+    neighborhood = {(0, 0): grid[i, j]} if include_center else {}
 
-    neighborhood = {}
-    ir = (max(i - 1, 0), min(i + 1, grid.shape[0]))
-    jr = (max(j - 1, 0), min(j + 1, grid.shape[1]))
-    for ii in range(ir[0], ir[1] + 1):
-        for jj in range(jr[0], jr[1] + 1):
-            if i == ii and j == jj: continue  # ignore the center
-            coords = (ii, jj) if absolute_coords else (ii - i, jj - j)
-            # diagonals: both coords different
-            if (neighbors == Neighbors.DIAGONAL or neighbors == Neighbors.COMPLETE) and (i != ii and j != jj):
+    irange = (max(i - 1, 0), min(i + 1, grid.shape[0]))
+    jrange = (max(j - 1, 0), min(j + 1, grid.shape[1]))
+    for ii in range(irange[0], irange[1] + 1):
+        for jj in range(jrange[0], jrange[1] + 1):
+            if i == ii and j == jj: continue                                # ignore the center
+            if ii >= grid.shape[0] or jj >= grid.shape[1]: continue         # make sure we're still within the grid
+            coords = (ii, jj) if absolute_coords else (ii - i, jj - j)      # use relative or absolute coordinates
+            if (neighbors == Neighbors.DIAGONAL or neighbors == Neighbors.COMPLETE) \
+                    and (i != ii and j != jj):                              # diagonals: both coords are different
                 logger.info(f"Adding diagonal neighbor ({ii}, {jj}), ({i}, {j})")
                 neighborhood[coords] = grid[ii, jj]
-            # cardinals: 1 coord equal, 1 different
-            elif (neighbors == Neighbors.CARDINAL or neighbors == Neighbors.COMPLETE) and ((i == ii and j != jj) or (i != ii and j == jj)):
+            elif (neighbors == Neighbors.CARDINAL or neighbors == Neighbors.COMPLETE) \
+                    and ((i == ii and j != jj) or (i != ii and j == jj)):   # cardinals: 1 coord equal, 1 different
                 logger.info(f"Adding cardinal neighbor ({ii}, {jj}), ({i}, {j})")
                 neighborhood[coords] = grid[ii, jj]
 
-    # optionally exclude zeros (missing)
+    # optionally exclude zeros (interpreted as missing values)
     if exclude_zero:
         neighborhood = {k: v for k, v in neighborhood.items() if (k == (0, 0) or (k != (0, 0) and v != 0))}
 
@@ -61,18 +63,18 @@ def get_neighborhood(
 def get_neighborhoods(
         grid: np.ndarray,
         neighbors: Neighbors = Neighbors.CARDINAL,
-        layers: int = 1,
+        include_center: bool = False,
         exclude_zero: bool = False):
     """
     Computes all cell neighborhoods in the given grid.
 
     :param grid: The grid
     :param neighbors: The cells to consider neighbors
-    :param layers: The width of the neighborhood
+    :param include_center: Whether to include the central cell in the neighborhood
     :param exclude_zero: Whether to exclude zero-valued neighbors
     :return: A dictionary mapping cell locations to dictionaries mapping relative locations around the central cell to neighboring values
     """
-    return {(i, j): get_neighborhood(grid, i, j, neighbors, layers, exclude_zero) for i in
+    return {(i, j): get_neighborhood(grid, i, j, neighbors, include_center, exclude_zero) for i in
             range(0, grid.shape[0]) for j in range(0, grid.shape[1])}
 
 

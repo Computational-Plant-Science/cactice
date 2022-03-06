@@ -22,7 +22,6 @@ Interaction = Callable[[np.ndarray, Tuple[int, int], Tuple[int, int]], float]
 def bond_energies(
         grid: np.ndarray,
         neighbors: Neighbors,
-        layers: int,
         interaction: Interaction) -> Dict[Tuple[Tuple[int, int], Tuple[int, int]], float]:
     """
     Computes bonds and bond energies for the given grid and interaction function.
@@ -52,7 +51,6 @@ def bond_energies(
 
 def H(grid: np.ndarray,
       neighbors: Neighbors,
-      layers: int,
       interaction: Interaction,
       J: float = 1.0) -> float:
     """
@@ -63,7 +61,7 @@ def H(grid: np.ndarray,
     :param J: The multiplier
     :return: The energy
     """
-    bonds = bond_energies(grid, neighbors, layers, interaction)
+    bonds = bond_energies(grid, neighbors, interaction)
     e = sum(bonds.values())
     return J * e
 
@@ -72,7 +70,6 @@ def neighborhood_H(
         grid: np.ndarray,
         cell: Tuple[int, int],
         neighbors: Neighbors,
-        layers: int,
         interaction: Interaction,
         J: float = 1.0) -> float:
     """
@@ -93,12 +90,8 @@ def neighborhood_H(
         i=i,
         j=j,
         neighbors=neighbors,
-        width=layers,
+        include_center=False,
         exclude_zero=True)
-
-    # ignore central cell
-    # TODO: make this an option on `get_neighborhood()`
-    del neighborhood[(0, 0)]
 
     for (ni, nj), nv in neighborhood.items():
         e += interaction(grid, (i + ni, j + nj), (i, j))
@@ -115,7 +108,6 @@ class MRF:
     def __init__(
             self,
             neighbors: Neighbors = Neighbors.CARDINAL,
-            layers: int = 1,
             interaction: str = 'proportional',
             # interaction: Interaction,
             J: float = 1.0,
@@ -137,7 +129,6 @@ class MRF:
         self.__fit: bool = False
         self.__random_state: RandomState = RandomState(seed)
         self.__neighbors: Neighbors = neighbors
-        self.__layers: int = layers
         self.__interaction: str = interaction
         # self.__interaction: Interaction = interaction
         self.__J: float = J
@@ -227,7 +218,7 @@ class MRF:
         # for each grid...
         for grid in grids:
             # create dictionary mapping cell location to neighborhood
-            neighborhoods = get_neighborhoods(grid, self.__neighbors, self.__layers, exclude_zero=True)
+            neighborhoods = get_neighborhoods(grid, self.__neighbors, exclude_zero=True)
             self.__neighborhoods.append(neighborhoods)
 
         self.__fit = True
@@ -285,13 +276,13 @@ class MRF:
                 else:
                     raise ValueError(f"Unsupported interaction: {self.__interaction}")
 
-                energy_old = neighborhood_H(pred, (i, j), self.__neighbors, self.__layers, interaction)
-                energy_new = neighborhood_H(pcpy, (i, j), self.__neighbors, self.__layers, interaction)
+                energy_old = neighborhood_H(pred, (i, j), self.__neighbors, interaction)
+                energy_new = neighborhood_H(pcpy, (i, j), self.__neighbors, interaction)
                 difference = energy_new - energy_old
 
                 # compute the total and average energy corresponding to the new configuration
                 values_ttl = len([p for p in np.ravel(grid) if p != 0])
-                energy_ttl = H(np.vectorize(lambda x: float(x))(pcpy), self.__neighbors, self.__layers, interaction)
+                energy_ttl = H(np.vectorize(lambda x: float(x))(pcpy), self.__neighbors, interaction)
                 energy_avg = (energy_ttl / values_ttl) if values_ttl > 0 else 0
 
                 # if we lowered the energy (or random chance of detriment if we didn't), accept the update

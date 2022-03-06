@@ -14,20 +14,17 @@ class KNN:
     def __init__(
             self,
             k: int = 10,
-            neighbors: Neighbors = Neighbors.CARDINAL,
-            layers: int = 1):
+            neighbors: Neighbors = Neighbors.CARDINAL):
         """
         Create a K-nearest neighbors model.
 
         :param neighbors: Which adjacent cells to consider neighbors.
-        :param layers: How many layers of adjacent cells to consider neighbors.
         """
 
         self.__logger = logging.getLogger(__name__)
         self.__fit: bool = False
         self.__k: int = k
         self.__neighbors: Neighbors = neighbors
-        self.__layers: int = layers
         self.__train: List[np.ndarray] = []
         self.__cell_distribution: Dict[str, float] = {}
 
@@ -47,7 +44,7 @@ class KNN:
         # for each grid...
         for grid in grids:
             # create dictionary mapping cell location to neighborhood
-            neighborhoods = get_neighborhoods(grid, self.__neighbors, self.__layers, exclude_zero=True)
+            neighborhoods = get_neighborhoods(grid, self.__neighbors, exclude_zero=True)
             self.__neighborhoods.append(neighborhoods)
 
         self.__fit = True
@@ -88,11 +85,8 @@ class KNN:
                     i=i,
                     j=j,
                     neighbors=self.__neighbors,
-                    width=self.__layers,
+                    include_center=False,
                     exclude_zero=True)
-
-                # ignore central cell
-                del neighborhood[(0, 0)]
 
                 # pull out neighbor cell values
                 neighbors = list(neighborhood.values())

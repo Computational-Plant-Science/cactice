@@ -12,21 +12,18 @@ from cactice.grids import Neighbors, get_neighborhood
 class RNS:
     def __init__(
             self,
-            neighbors: Neighbors = Neighbors.CARDINAL,
-            layers: int = 1):
+            neighbors: Neighbors = Neighbors.CARDINAL):
         """
         Create a random neighbor selection model.
         This model assigns to each cell by simply selecting at random from its neighbors.
         If no neighbors are known, a value is randomly selected from the observed class distribution.
 
         :param neighbors: The cells to consider part of the neighborhood.
-        :param layers: The width of the neighborhood
         """
 
         self.__logger = logging.getLogger(__name__)
         self.__fit: bool = False
         self.__neighbors: Neighbors = neighbors
-        self.__layers: int = layers
         self.__train: List[np.ndarray] = []
         self.__cell_distribution: Dict[str, float] = {}
 
@@ -72,11 +69,8 @@ class RNS:
                     i=i,
                     j=j,
                     neighbors=self.__neighbors,
-                    width=self.__layers,
+                    include_center=False,
                     exclude_zero=True)
-
-                # ignore central cell
-                del neighborhood[(0, 0)]
 
                 # pull out neighbor cell values
                 neighbors = list(neighborhood.values())
