@@ -1,19 +1,22 @@
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 
-def hamming_distance(a: List[int], b: List[int]) -> int:
+def hamming_distance(a: List[Any], b: List[Any]) -> int:
     """
-    Computes the Hamming distance between the neighborhoods (interpreted as strings).
-    Assumes both neighborhoods are of equal size. Adapted from https://stackoverflow.com/a/54174768/6514033.
+    Computes the Hamming distance between the lists (first casting their elements to strings).
+    Lists must be the same length. Adapted from https://stackoverflow.com/a/54174768/6514033.
 
-    :param a: The first neighborhood
-    :param b: The second neighborhood
-    :return: The Hamming distance
+    :param a: The first list
+    :param b: The second list
+    :return: The Hamming distance between the lists interpreted as strings
     """
-    a_str = ''.join([str(i) for i in a])
-    b_str = ''.join([str(i) for i in b])
 
-    return sum(ca != cb for ca, cb in zip(a_str, b_str))
+    # make sure lists are the same length
+    if len(a) != len(b):
+        raise ValueError(f"Lists must be the same length")
+
+    # count pairs of elements which aren't equal
+    return sum(ac != bc for ac, bc in zip(a, b))
 
 
 def frechet_distance(a: List[Tuple[float, float]], b: List[Tuple[float, float]]) -> float:

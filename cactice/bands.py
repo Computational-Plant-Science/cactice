@@ -25,12 +25,20 @@ def get_band(
         raise ValueError(f"Band starting distance must be greater than 0 and less than min(grid length, grid width)")
 
     band = {}
-    for ii in range(max(i - start, 0), min(i + start + 1, grid.shape[0])):
-        for jj in range(max(j - start, 0), min(j + start + 1, grid.shape[1])):
+    ir = (max(i - start, 0), min(i + start, grid.shape[0]))
+    jr = (max(j - start, 0), min(j + start, grid.shape[1]))
+    for ii in range(ir[0], ir[1] + 1):
+        for jj in range(jr[0], jr[1] + 1):
+            # skip interior cells
+            if (ii != ir[0] and ii != ir[1]) and (jj != jr[0] and jj != jr[1]):
+                print(f"Skipping {ii}, {jj}")
+                continue
+
+            # map the cell's value to relative or absolute coordinates
             coords = (ii, jj) if absolute_coords else (ii - i, jj - j)
             band[coords] = grid[ii, jj]
 
-    # optionally exclude zeros (missing)
+    # optionally exclude zeros (missing values)
     if exclude_zero:
         band = {k: v for k, v in band.items() if (k == (0, 0) or (k != (0, 0) and v != 0))}
 
