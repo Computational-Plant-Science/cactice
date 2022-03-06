@@ -13,6 +13,8 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
+## Overview
+
 `cactice` stands for **c**omputing **a**gricultural **c**rop lat**tice**s. This repository explores questions about regular spatial arrangements of plant phenotypes (e.g., in a field or greenhouse). For instance:
 
 - How does environmental context influence morphological development?
@@ -22,7 +24,7 @@
 
 **This repository is exploratory, unstable, and currently very minimal.**
 
-## Overview
+## Usage
 
 Check out the `notebooks/explore.ipynb` notebook for some examples.
 
