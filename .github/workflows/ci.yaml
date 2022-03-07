@@ -42,10 +42,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
         run: |
           coverage run --source=cactice -m pytest /home/runner/work/cactice/cactice/cactice/tests -s
-          coveralls --finish
+          coveralls
   publish:
     needs: [tests]
     runs-on: ubuntu-latest

@@ -7,6 +7,7 @@ import logging
 import numpy as np
 from numpy.random import choice, RandomState
 
+import cactice.grids
 import cactice.stats as stats
 from cactice.grids import Neighbors, get_neighborhood, get_neighborhoods
 
@@ -210,8 +211,8 @@ class MRF:
         """
 
         self.__train = grids
-        self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
-        self.__bond_distribution_horiz, self.__bond_distribution_vert = stats.undirected_bond_dist(
+        self.__cell_distribution = cactice.grids.cell_value_distribution(grids, exclude_zero=True)
+        self.__bond_distribution_horiz, self.__bond_distribution_vert = cactice.grids.undirected_bond_distribution(
             grids=grids,
             exclude_zero=True)
 

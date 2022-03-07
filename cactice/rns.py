@@ -5,6 +5,7 @@ import logging
 
 import numpy as np
 
+import cactice.grids
 import cactice.stats as stats
 from cactice.grids import Neighbors, get_neighborhood
 
@@ -33,7 +34,7 @@ class RNS:
         """
 
         self.__train = grids
-        self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
+        self.__cell_distribution = cactice.grids.cell_value_distribution(grids, exclude_zero=True)
         self.__fit = True
 
     def predict(self, grids: List[np.ndarray] = None) -> List[np.ndarray]:

@@ -5,6 +5,7 @@ import logging
 
 import numpy as np
 
+import cactice.grids
 from cactice.grids import get_neighborhood, get_neighborhoods, Neighbors
 from cactice.distance import hamming_distance
 import cactice.stats as stats
@@ -39,7 +40,7 @@ class KNN:
         """
 
         self.__train = grids
-        self.__cell_distribution = stats.cell_dist(grids, exclude_zero=True)
+        self.__cell_distribution = cactice.grids.cell_value_distribution(grids, exclude_zero=True)
 
         # for each grid...
         for grid in grids:
