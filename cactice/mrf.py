@@ -8,7 +8,6 @@ import numpy as np
 from numpy.random import choice, RandomState
 
 import cactice.grids
-import cactice.stats as stats
 from cactice.grids import Neighbors, get_neighborhood, get_neighborhoods
 
 # bond interaction signature

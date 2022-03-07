@@ -115,6 +115,33 @@ def get_neighborhoods(
             for j in range(0, grid.shape[1])}
 
 
+def neighborhood_distribution(
+        grid: np.ndarray,
+        neighbors: Neighbors = Neighbors.CARDINAL,
+        exclude_zero: bool = False) -> Dict[int, Dict[int, float]]:
+    """
+
+    :param grid:
+    :param neighbors:
+    :param exclude_zero:
+    :return:
+    """
+
+    neighborhoods = get_neighborhoods(grid=grid, neighbors=neighbors, exclude_zero=exclude_zero, absolute_coords=True)
+    unique = list(set(np.unique(np.ravel(grid))))
+    if exclude_zero: unique = [c for c in unique if c != 0]
+    freq = {k: {kk: 0 for kk in unique} for k in unique}
+    for loc, neighborhood in neighborhoods.items():
+        k = grid[loc[0], loc[1]]
+        if exclude_zero and k == 0: continue
+        for nloc, neighbor in neighborhood.items():
+            nk = grid[nloc[0], nloc[1]]
+            if exclude_zero and nk == 0: continue
+            freq[k][nk] += 1
+
+    return {k: {kk: (v[kk] / sum(freq[k].values())) for kk in unique} for (k, v) in freq.items()}
+
+
 def get_band(
         grid: np.ndarray,
         i: int,

@@ -8,7 +8,6 @@ import numpy as np
 import cactice.grids
 from cactice.grids import get_neighborhood, get_neighborhoods, Neighbors
 from cactice.distance import hamming_distance
-import cactice.stats as stats
 
 
 class KNN:

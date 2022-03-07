@@ -1,12 +1,10 @@
+import logging
 import random
 from typing import List, Dict
-from pprint import pprint
-import logging
 
 import numpy as np
 
 import cactice.grids
-import cactice.stats as stats
 from cactice.grids import Neighbors, get_neighborhood
 
 
