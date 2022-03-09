@@ -44,7 +44,7 @@ class KNN:
         # for each grid...
         for grid in grids:
             # create dictionary mapping cell location to neighborhood
-            neighborhoods = get_neighborhoods(grid, self.__neighbors, exclude_zero=True)
+            neighborhoods = get_neighborhoods(grid, self.__neighbors, include_center=True, exclude_zero=True)
             self.__neighborhoods.append(neighborhoods)
 
         self.__fit = True
@@ -95,7 +95,7 @@ class KNN:
                     self.__logger.debug(f"Assigning location ({i}, {j}) via KNN")
 
                     # compute distance from this neighborhood to every training neighborhood
-                    distances = {nh[(0, 0)]: hamming_distance(list(neighborhood.values()), list(nh.values())) for nh in neighborhoods}
+                    distances = {nh[(0, 0)]: hamming_distance(neighbors, [v for k, v in nh.items() if k != (0, 0)]) for nh in neighborhoods}
 
                     # sort distances ascending
                     distances = dict(sorted(distances.items(), key=lambda k, v: v, reverse=True))
