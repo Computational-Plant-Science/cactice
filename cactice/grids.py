@@ -15,6 +15,8 @@ class Neighbors(Enum):
     CARDINAL = 1  # top, bottom, left, right
     DIAGONAL = 2  # top left, top right, bottom left, bottom right
     COMPLETE = 3  # all the above
+    HORIZONTAL = 4  # only left & right
+    VERTICAL = 5  # only top & bottom
 
 
 def flatten(grids: List[np.ndarray]) -> List[int]:
@@ -78,6 +80,16 @@ def get_neighborhood(
             elif (neighbors == Neighbors.CARDINAL or neighbors == Neighbors.COMPLETE) \
                     and ((i == ii and j != jj) or (i != ii and j == jj)):
                 logger.info(f"Adding cell ({i}, {j})'s cardinal neighbor ({ii}, {jj}), ({i}, {j})")
+                neighborhood[coords] = grid[ii, jj]
+
+            # horizontal: i equal, j different
+            elif (neighbors == Neighbors.HORIZONTAL) and (i == ii and j != jj):
+                logger.info(f"Adding cell ({i}, {j})'s horizontal neighbor ({ii}, {jj}), ({i}, {j})")
+                neighborhood[coords] = grid[ii, jj]
+
+            # vertical: i different, j equal
+            elif (neighbors == Neighbors.HORIZONTAL) and (i != ii and j == jj):
+                logger.info(f"Adding cell ({i}, {j})'s vertical neighbor ({ii}, {jj}), ({i}, {j})")
                 neighborhood[coords] = grid[ii, jj]
 
     # optionally exclude zeros (interpreted as missing values)
@@ -448,10 +460,10 @@ def transition_matrix(
     :return: The transition matrix
     """
 
-    uniq = np.unique(np.ravel(grid))                           # get unique classes
+    uniq = np.unique(np.ravel(grid))  # get unique classes
     if exclude_zero: uniq = [val for val in uniq if val != 0]  # optionally exclude zeros
-    n_uniq = len(uniq)                                         # number of unique classes
-    tmat = np.zeros((n_uniq, n_uniq))                          # transition matrix
+    n_uniq = len(uniq)  # number of unique classes
+    tmat = np.zeros((n_uniq, n_uniq))  # transition matrix
 
     # get all neighborhoods and update the transition matrix with each
     nhoods = get_neighborhoods(grid, neighbors=neighbors, exclude_zero=exclude_zero, absolute_coords=True)
