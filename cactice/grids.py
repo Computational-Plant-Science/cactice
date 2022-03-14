@@ -88,7 +88,7 @@ def get_neighborhood(
                 neighborhood[coords] = grid[ii, jj]
 
             # vertical: i different, j equal
-            elif (neighbors == Neighbors.HORIZONTAL) and (i != ii and j == jj):
+            elif (neighbors == Neighbors.VERTICAL) and (i != ii and j == jj):
                 logger.info(f"Adding cell ({i}, {j})'s vertical neighbor ({ii}, {jj}), ({i}, {j})")
                 neighborhood[coords] = grid[ii, jj]
 
