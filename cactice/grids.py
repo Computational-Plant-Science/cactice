@@ -448,11 +448,12 @@ def undirected_bond_distribution(
 
 
 def transition_matrix(
-        grid: np.ndaray,
+        grid: np.ndarray,
         neighbors: Neighbors = Neighbors.CARDINAL,
         exclude_zero: bool = False) -> np.ndarray:
     """
-    Computes the bond transition matrix (counts transitions between each cell class) on the given grid.
+    Computes the transition matrix for the given grid. The transition matrix is square, with rows
+    and columns labeled by classes. Interior cells count transitions between adjacent classes.
 
     :param grid: The grid
     :param neighbors: The cells to consider neighbors
