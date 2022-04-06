@@ -436,7 +436,7 @@ def undirected_bond_distribution(
 
 
 def transition_matrix(
-        grid: np.ndarray,
+        grid: np.ndaray,
         neighbors: Neighbors = Neighbors.CARDINAL,
         exclude_zero: bool = False) -> np.ndarray:
     """
