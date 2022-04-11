@@ -20,7 +20,7 @@ def plot_grid(
     values = list(set(np.ravel(grid)))
     labels = np.vectorize(lambda x: str(x) if x != 0 else '')(grid)
     ax = sns.heatmap(
-        grid,
+        np.vectorize(lambda s: hash(s))(grid),
         square=True,
         cbar=False,
         annot=labels,

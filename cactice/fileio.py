@@ -116,7 +116,7 @@ def read_grids_csv(
                 # update the grid
                 grid[i, j] = cls
 
-        # save by name and cast values from float (numpy default) to int
+        # cast to int and save by name
         grids[str(name)] = grid.astype(int)
 
     return grids
