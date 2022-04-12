@@ -75,6 +75,7 @@ def read_grids_csv(
     # load the CSV into a data frame
     # TODO: determine whether to read headers or not based on params
     df = pd.read_csv(path, sep=',')
+    print(df)
 
     # if there's only 1 grid and no specified name column, create it
     if name_header not in df: df[name_header] = 1
@@ -86,9 +87,17 @@ def read_grids_csv(
         # subset the data frame corresponding to the current grid
         sdf = df.loc[df[name_header] == name]
 
+        # reindex rows and cols
+        rows = sorted(list(set(sdf[row_header])))
+        nums = sorted(list(set(sdf[col_header])))
+
+        # attach new row and column indices to dataframe
+        sdf.loc[df[name_header] == name, 'I'] = sdf.apply(lambda r: rows.index(r[row_header]), axis=1)
+        sdf.loc[df[name_header] == name, 'J'] = sdf.apply(lambda r: nums.index(r[col_header]), axis=1)
+
         # find row and column counts (including missing values)
-        rows = max(sdf[row_header]) - min(sdf[row_header]) + 1
-        cols = max(sdf[col_header]) - min(sdf[col_header]) + 1
+        rows = max(sdf['I']) - min(sdf['I']) + 1
+        cols = max(sdf['J']) - min(sdf['J']) + 1
 
         # initialize grid as empty 2D array
         grid = np.zeros(shape=(rows, cols))
@@ -98,7 +107,7 @@ def read_grids_csv(
             for j in range(0, cols):
 
                 # check entry at location (i, j)
-                matched = sdf.loc[(df[row_header] == i) & (df[col_header] == j)]
+                matched = sdf.loc[(sdf['I'] == i) & (sdf['J'] == j)]
 
                 # if missing, fill it in with class = 0 (unknown)
                 if len(matched) == 0:
@@ -111,7 +120,7 @@ def read_grids_csv(
                     }, ignore_index=True)
                 # otherwise use the given value
                 else:
-                    cls = matched.to_dict('records')[0][class_header]
+                    cls = int(matched.to_dict('records')[0][class_header])
 
                 # update the grid
                 grid[i, j] = cls
