@@ -1,4 +1,5 @@
 import logging
+from math import log, factorial
 from collections import OrderedDict, Counter
 from enum import Enum
 from itertools import product, repeat
@@ -477,3 +478,137 @@ def transition_matrix(
             tmat[ii, jj] += 1
 
     return tmat
+
+
+def permute(grid: np.ndarray) -> np.ndarray:
+    """
+    Permutes the grid, returning a new arrangement with the same shape and number of each class of cells.
+
+    :param grid: The grid
+    :return: The permuted grid
+    """
+
+    flat = flatten([grid])
+    np.random.shuffle(flat)
+    return np.reshape(flat, grid.shape)
+
+
+def get_permutations(grid: np.ndarray, n_perms: int = 100000) -> List[np.ndarray]:
+    """
+    Generates permutations (unique arrangements, holding counts of each cell value constant) of the given grid.
+    If n_permutations is greater than or equal to the total number of possible permutations, all are returned.
+
+    :param grid: The grid
+    :param n_perms: The maximum number of permutations
+    :return: The permutations
+    """
+
+    if n_perms > 1000000:
+        raise ValueError(f"n_perms must not exceed 1,000,000")
+
+    return [permute(grid) for _ in range(0, n_perms)]
+
+
+def total_edge_length(grid: np.ndarray, same: bool = False) -> int:
+    """
+    Computes the total edge length between cells of different (or the same) classes.
+
+    :param grid: The grid
+    :param same: Whether to count edges between cells of the same class instead
+    :return: The total edge length
+    """
+
+    tmat = transition_matrix(grid)
+    trace = np.trace(tmat)
+    return trace if same else tmat.sum() - np.trace(tmat)
+
+
+def shannon_entropy(grid: np.ndarray, exclude_zero: bool = False) -> float:
+    """
+    Computes the Shannon entropy of the given grid.
+
+    :param grid: The grid
+    :param exclude_zero: Whether to exclude zero-valued (missing) cells
+    :return: The grid's Shannon entropy
+    """
+
+    # flatten the plot into a 1d array and
+    cells = flatten([grid])
+    if exclude_zero: cells = [c for c in cells if c != '0']
+
+    # get unique classes
+    classes = list(set(cells))
+
+    # count occurrences and compute proportions
+    freqs = OrderedDict(sorted(dict(Counter(cells)).items()))
+
+    # compute entropy
+    return -sum([p * log(p) for p in [freqs[c] / len(cells) for c in classes]])
+
+
+def balance(grid: np.ndarray, exclude_zero: bool = False) -> float:
+    """
+    Computes the balance (log-normalized Shannon entropy) of the given grid.
+
+    :param grid: The grid
+    :param exclude_zero: Whether to exclude zero-valued (missing) cells
+    :return: The grid's balance
+    """
+
+    # flatten the plot into a 1d array and
+    cells = flatten([grid])
+    if exclude_zero: cells = [c for c in cells if c != '0']
+
+    # get unique classes
+    classes = list(set(cells))
+
+    # compute balance
+    return shannon_entropy(grid, exclude_zero) / log(len(classes))
+
+
+MACROSTATES = ['edge_length', 'kl_divergence']
+
+
+def configurational_entropy(grid: np.ndarray, n_perms=100000, macrostate='edge_length') -> float:
+    """
+    Estimates the configurational entropy of the grid using the given macrostate selection and number of permutations.
+
+    :param grid: The grid
+    :param n_perms: The number of permutations
+    :param macrostate: The macrostate
+    :return: The configuration (Boltzmann) entropy
+    """
+
+    if macrostate not in MACROSTATES:
+        raise ValueError(f"Unsupported selection (options: {','.join(MACROSTATES)})")
+
+    # generate permutations of the grid
+    perms = get_permutations(grid, n_perms)
+
+    if macrostate == 'edge_length':
+        # compute total edge length for original grid
+        length = total_edge_length(grid)
+
+        # compute total edge length for each permutation
+        lengths = [total_edge_length(p) for p in perms]
+
+        # return ln(W)
+        return log(len([l for l in lengths if l == length]))
+
+        # compute proportion of total edge lengths equal to the original grid's total
+        # prop = len([l for l in lengths if l == length]) / (len(lengths) + 1)
+        # return prop
+
+        # if the grid is small enough that we enumerated all permutations, no need to rescale
+        all_perms = (grid.shape[0] * grid.shape[1]) ** len(list(set(flatten([grid]))))
+        if all_perms <= n_perms:
+            return prop
+        # otherwise, rescale the proportion from [0, n_permutations] to [0, n!] where n is the number of grid cells
+        else:
+            return prop / n_perms * factorial(grid.shape[0] * grid.shape[1])
+    elif macrostate == 'kl_divergence':
+        # TODO
+        # dists = [undirected_bond_distribution([p]) for p in perms]
+        raise NotImplementedError()
+    else:
+        raise ValueError(f"Unsupported selection (options: {','.join(MACROSTATES)})")
