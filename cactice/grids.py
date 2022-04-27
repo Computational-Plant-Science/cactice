@@ -594,18 +594,6 @@ def configurational_entropy(grid: np.ndarray, n_perms=100000, macrostate='edge_l
 
         # return ln(W)
         return log(len([l for l in lengths if l == length]))
-
-        # compute proportion of total edge lengths equal to the original grid's total
-        # prop = len([l for l in lengths if l == length]) / (len(lengths) + 1)
-        # return prop
-
-        # if the grid is small enough that we enumerated all permutations, no need to rescale
-        all_perms = (grid.shape[0] * grid.shape[1]) ** len(list(set(flatten([grid]))))
-        if all_perms <= n_perms:
-            return prop
-        # otherwise, rescale the proportion from [0, n_permutations] to [0, n!] where n is the number of grid cells
-        else:
-            return prop / n_perms * factorial(grid.shape[0] * grid.shape[1])
     elif macrostate == 'kl_divergence':
         # TODO
         # dists = [undirected_bond_distribution([p]) for p in perms]
