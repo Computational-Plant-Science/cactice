@@ -75,7 +75,6 @@ def read_grids_csv(
     # load the CSV into a data frame
     # TODO: determine whether to read headers or not based on params
     df = pd.read_csv(path, sep=',')
-    print(df)
 
     # if there's only 1 grid and no specified name column, create it
     if name_header not in df: df[name_header] = 1
